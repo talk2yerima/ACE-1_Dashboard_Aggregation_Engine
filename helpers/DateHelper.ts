@@ -62,6 +62,15 @@ export class DateHelper {
     }
 
     const str = String(value).trim();
+
+    // Excel serial date stored as a string (e.g. "45306") — happens when a
+    // date cell value is converted via String() before being stored in rawComponents.
+    // Valid Excel serials are roughly 1 (Jan 1 1900) to 2,958,465 (Dec 31 9999).
+    const numericStr = parseFloat(str);
+    if (!isNaN(numericStr) && numericStr >= 1 && numericStr <= 2958465 && String(numericStr) === str) {
+      const d = dayjs(new Date(Math.round((numericStr - 25569) * 86400 * 1000)));
+      if (d.isValid()) return d;
+    }
     if (!str || str === '' || str.toLowerCase() === 'null') return null;
 
     for (const fmt of DATE_FORMATS) {
@@ -184,5 +193,12 @@ export class DateHelper {
     return this.today.month() >= 9
       ? oct1ThisYear                         // Oct–Dec: FY started this year
       : oct1ThisYear.subtract(1, 'year');    // Jan–Sep: FY started last year
+  }
+
+  /** Full PEPFAR fiscal year: Oct 1 → Sep 30. */
+  getPEPFARFiscalYearRange(): DateRange {
+    const start = this.getPEPFARFiscalYearStart();
+    const end = start.add(1, 'year').subtract(1, 'day').endOf('day');
+    return { start, end };
   }
 }

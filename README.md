@@ -39,7 +39,7 @@ Run this once after cloning the repo (or whenever `package.json` changes):
 
 ```bash
 npm install
-```
+```Remove-Item Env:RADET_FILE
 
 ### 2. Place your workbook
 

@@ -11,6 +11,8 @@ export interface FilterDef {
     | 'inList'
     | 'notInList'
     | 'dateMode'
+    | 'dateinRange'
+    | 'dateNotInRange'
     | 'greaterThan'
     | 'lessThan'
     | 'greaterThanOrEqual'
@@ -102,6 +104,26 @@ export class FilterEngine {
       case 'dateMode': {
         const helper = this.getDateHelper(filter.column);
         return helper.isInRange(raw);
+      }
+
+      case 'dateinRange': {
+        const helper = this.getDateHelper(filter.column);
+        const d = helper.parse(raw);
+        if (!d) return false;
+        const range = value === 'CurrentFY'
+          ? helper.getPEPFARFiscalYearRange()
+          : helper.getRange();
+        return d.isBetween(range.start, range.end, 'day', '[]');
+      }
+
+      case 'dateNotInRange': {
+        const helper = this.getDateHelper(filter.column);
+        const d = helper.parse(raw);
+        if (!d) return false;
+        const range = value === 'CurrentFY'
+          ? helper.getPEPFARFiscalYearRange()
+          : helper.getRange();
+        return !d.isBetween(range.start, range.end, 'day', '[]');
       }
 
       case 'greaterThan':

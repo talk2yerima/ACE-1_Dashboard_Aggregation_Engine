@@ -5,7 +5,7 @@ indicators:
 
   - name: HTS_TST_POS
     description: "Number of individuals who tested HIV positive"
-    source: CombinedHTS
+    source: Sheet2
     periodColumn: DateOfHIVTesting
     requiredColumns:
       - FinalHIVTestResult
@@ -31,7 +31,7 @@ indicators:
 
   - name: NEWLY_ENROLLED
     description: "Newly enrolled patients on ART"
-    source: CombinedRADET
+    source: Sheet1
     periodColumn: EnrollmentDate
     requiredColumns:
       - EnrollmentDate
@@ -57,7 +57,7 @@ indicators:
 
   - name: TX_NEW
     description: "Newly initiated on ART (excluding transfers)"
-    source: CombinedRADET
+    source: Sheet1
     periodColumn: ARTStartDate
     requiredColumns:
       - ARTStartDate
@@ -87,7 +87,7 @@ indicators:
 
   - name: TB_SCRN_CARE_NEW
     description: "New patients enrolled in HIV care (ART started and TB screened same day)"
-    source: CombinedRADET
+    source: Sheet1
     periodColumn: ARTStartDate
     requiredColumns:
       - DateOfTBScreening
@@ -115,7 +115,7 @@ indicators:
 
   - name: CARE_NEW_PRESUMPTIVE
     description: "Active patients with presumptive TB screened today"
-    source: CombinedRADET
+    source: Sheet1
     periodColumn: DateOfTBScreening
     requiredColumns:
       - CurrentARTStatus
@@ -152,7 +152,7 @@ indicators:
 
   - name: TB_SAMPLE_COLLECTED
     description: "Active patients with presumptive TB who had sample collected"
-    source: CombinedRADET
+    source: Sheet1
     periodColumn: DateOfTBSampleCollection
     requiredColumns:
       - CurrentARTStatus
@@ -189,7 +189,7 @@ indicators:
 
   - name: TB_RESULTS_RETURNED
     description: "TB results returned to patients"
-    source: CombinedRADET
+    source: Sheet1
     periodColumn: DateOfTBResultReturn
     requiredColumns:
       - DateOfTBResultReturn
@@ -213,7 +213,7 @@ indicators:
 
   - name: TB_TX_STARTED
     description: "TB patients who started treatment"
-    source: CombinedRADET
+    source: Sheet1
     periodColumn: TBTreatmentStartDate
     requiredColumns:
       - TBTreatmentStartDate
@@ -226,6 +226,178 @@ indicators:
       - column: TBTreatmentStartDate
         operator: dateMode
         value: TODAY
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: Death_by_TX_NEW
+    description: "Death Among Newly initiated on ART (excluding transfers)"
+    source: Sheet1
+    periodColumn: DateOfCurrentARTStatus
+    requiredColumns:
+      - ARTStartDate
+      - CareEntryPoint
+      - CurrentARTStatus
+      - DateOfCurrentARTStatus
+      - Sex
+      - Age
+      - Facility
+      - DATIMCode
+      - State
+    filters:
+      - column: DateOfCurrentARTStatus
+        operator: dateMode
+        value: DAILY
+      - column: ARTStartDate
+        operator: dateinRange
+        value: CurrentFY
+      - column: CareEntryPoint
+        operator: notContains
+        value: "transfer"
+        caseSensitive: false
+      - column: CurrentARTStatus
+        operator: equals
+        value: "Died"
+        caseSensitive: false
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+      - CareEntryPoint
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: Death_by_TX_CURR
+    description: "Death Among Active on ART (excluding TX_New)"
+    source: Sheet1
+    periodColumn: DateOfCurrentARTStatus
+    requiredColumns:
+      - CurrentARTStatus
+      - DateOfCurrentARTStatus
+      - ARTStartDate
+      - CareEntryPoint
+      - Sex
+      - Age
+      - Facility
+      - DATIMCode
+      - State
+    filters:
+      - column: DateOfCurrentARTStatus
+        operator: dateMode
+        value: DAILY
+      - column: CurrentARTStatus
+        operator: equals
+        value: "Died"
+        caseSensitive: false
+      - column: ARTStartDate
+        operator: dateNotInRange
+        value: CurrentFY
+      - column: CareEntryPoint
+        operator: notContains
+        value: "transfer"
+        caseSensitive: false
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+      - CareEntryPoint
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: Total_Death
+    description: "Total death in FY"
+    source: Sheet1
+    periodColumn: DateOfCurrentARTStatus
+    requiredColumns:
+      - CurrentARTStatus
+      - DateOfCurrentARTStatus
+      - Sex
+      - Age
+      - Facility
+      - DATIMCode
+      - State
+    filters:
+      - column: DateOfCurrentARTStatus
+        operator: dateinRange
+        value: CurrentFY
+      - column: CurrentARTStatus
+        operator: equals
+        value: "Died"
+        caseSensitive: false
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: Total_TX_ML
+    description: "Total TX_ML in FY"
+    source: Sheet1
+    periodColumn: DateOfCurrentARTStatus
+    requiredColumns:
+      - CurrentARTStatus
+      - DateOfCurrentARTStatus
+      - Sex
+      - Age
+      - Facility
+      - DATIMCode
+      - State
+    filters:
+      - column: DateOfCurrentARTStatus
+        operator: dateinRange
+        value: CurrentFY
+      - column: CurrentARTStatus
+        operator: inList
+        value:
+          - "Died"
+          - "IIT"
+          - "Transferred Out"
+        caseSensitive: false
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: IIT_by_lt3months_refill
+    description: "IIT by months of refill less than 3 months"
+    source: Sheet1
+    periodColumn: DateOfCurrentARTStatus
+    requiredColumns:
+      - CurrentARTStatus
+      - DateOfCurrentARTStatus
+      - MonthsOfARVRefill
+      - Sex
+      - Age
+      - Facility
+      - DATIMCode
+      - State
+    filters:
+      - column: DateOfCurrentARTStatus
+        operator: dateinRange
+        value: CurrentFY
+      - column: CurrentARTStatus
+        operator: equals
+        value: "IIT"
+        caseSensitive: false
+      - column: MonthsOfARVRefill
+        operator: lessThan
+        value: 3
     groupBy:
       - Facility
       - DATIMCode

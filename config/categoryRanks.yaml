@@ -19,11 +19,11 @@ categoryRanks:
 
   CurrentARTStatus:
     - "Active"             # rank 1  ~49.8%
-    - "Lost to Follow-Up"  # rank 2  ~25.4%
+    - "IIT"                # rank 2  ~25.4%
     - "Transferred Out"    # rank 3  ~10.2%
-    - "Stopped Treatment"  # rank 4  ~7.6%
-    - "Dead"               # rank 5  ~3.0%
-    - "Inactive"           # rank 6  ~1.6%
+    - "Died"               # rank 4  ~7.6%
+    - "Invalid"            # rank 5  ~3.0%
+    - "Biometric Naive"    # rank 6  ~1.6%
 
   TBStatus:
     - "Not a TB Case"   # rank 1  ~97.9%
