@@ -1,0 +1,26 @@
+{
+  "name": "radet-dashboard-engine",
+  "version": "1.0.0",
+  "description": "RADET Dashboard Aggregation Engine for PEPFAR/DATIM data",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node index.ts",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "dayjs": "^1.11.10",
+    "exceljs": "^4.4.0",
+    "js-yaml": "^4.1.0",
+    "lodash": "^4.17.21",
+    "winston": "^3.11.0"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/lodash": "^4.14.202",
+    "@types/node": "^20.10.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.2"
+  }
+}

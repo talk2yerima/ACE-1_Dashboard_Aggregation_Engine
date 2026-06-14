@@ -1,0 +1,261 @@
+# RADET Dashboard Indicators Configuration
+# Column names match sheetHeaders.yaml positional mappings.
+
+indicators:
+
+  - name: HTS_TST_POS
+    description: "Number of individuals who tested HIV positive"
+    source: CombinedHTS
+    periodColumn: DateOfHIVTesting
+    requiredColumns:
+      - FinalHIVTestResult
+      - DateOfHIVTesting
+      - Sex
+      - Age
+      - DATIMCode
+    filters:
+      - column: FinalHIVTestResult
+        operator: equals
+        value: "Positive"
+      - column: DateOfHIVTesting
+        operator: dateMode
+        value: DAILY
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: NEWLY_ENROLLED
+    description: "Newly enrolled patients on ART"
+    source: CombinedRADET
+    periodColumn: EnrollmentDate
+    requiredColumns:
+      - EnrollmentDate
+      - Sex
+      - Age
+      - ARTEnrollmentSetting
+      - Facility
+      - DATIMCode
+      - State
+    filters:
+      - column: EnrollmentDate
+        operator: dateMode
+        value: DAILY
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+      - ARTEnrollmentSetting
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: TX_NEW
+    description: "Newly initiated on ART (excluding transfers)"
+    source: CombinedRADET
+    periodColumn: ARTStartDate
+    requiredColumns:
+      - ARTStartDate
+      - CareEntryPoint
+      - Sex
+      - Age
+      - Facility
+      - DATIMCode
+      - State
+    filters:
+      - column: ARTStartDate
+        operator: dateMode
+        value: DAILY
+      - column: CareEntryPoint
+        operator: notContains
+        value: "transfer"
+        caseSensitive: false
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+      - CareEntryPoint
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: TB_SCRN_CARE_NEW
+    description: "New patients enrolled in HIV care (ART started and TB screened same day)"
+    source: CombinedRADET
+    periodColumn: ARTStartDate
+    requiredColumns:
+      - DateOfTBScreening
+      - ARTStartDate
+      - Sex
+      - Age
+      - Facility
+      - DATIMCode
+      - State
+    filters:
+      - column: DateOfTBScreening
+        operator: dateMode
+        value: DAILY
+      - column: ARTStartDate
+        operator: dateMode
+        value: DAILY
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: CARE_NEW_PRESUMPTIVE
+    description: "Active patients with presumptive TB screened today"
+    source: CombinedRADET
+    periodColumn: DateOfTBScreening
+    requiredColumns:
+      - CurrentARTStatus
+      - TBStatus
+      - DateOfTBScreening
+      - Sex
+      - Age
+      - Facility
+      - DATIMCode
+      - State
+    filters:
+      - column: CurrentARTStatus
+        operator: contains
+        value: "Active"
+        caseSensitive: false
+      - column: TBStatus
+        operator: inList
+        value:
+          - "Presumptive TB"
+          - "Presumptive"
+          - "TB/HIV co-infected"
+          - "TB suspect"
+      - column: DateOfTBScreening
+        operator: dateMode
+        value: TODAY
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: TB_SAMPLE_COLLECTED
+    description: "Active patients with presumptive TB who had sample collected"
+    source: CombinedRADET
+    periodColumn: DateOfTBSampleCollection
+    requiredColumns:
+      - CurrentARTStatus
+      - TBStatus
+      - DateOfTBSampleCollection
+      - Sex
+      - Age
+      - Facility
+      - DATIMCode
+      - State
+    filters:
+      - column: CurrentARTStatus
+        operator: equals
+        value: "Active"
+        caseSensitive: false
+      - column: TBStatus
+        operator: inList
+        value:
+          - "Presumptive TB"
+          - "Presumptive"
+          - "TB/HIV co-infected"
+          - "TB suspect"
+      - column: DateOfTBSampleCollection
+        operator: dateMode
+        value: TODAY
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: TB_RESULTS_RETURNED
+    description: "TB results returned to patients"
+    source: CombinedRADET
+    periodColumn: DateOfTBResultReturn
+    requiredColumns:
+      - DateOfTBResultReturn
+      - Sex
+      - Age
+      - Facility
+      - DATIMCode
+      - State
+    filters:
+      - column: DateOfTBResultReturn
+        operator: dateMode
+        value: TODAY
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: TB_TX_STARTED
+    description: "TB patients who started treatment"
+    source: CombinedRADET
+    periodColumn: TBTreatmentStartDate
+    requiredColumns:
+      - TBTreatmentStartDate
+      - Sex
+      - Age
+      - Facility
+      - DATIMCode
+      - State
+    filters:
+      - column: TBTreatmentStartDate
+        operator: dateMode
+        value: TODAY
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+# Formula-based indicators (calculated from other indicators)
+formulaIndicators:
+
+  - name: LINKAGE_RATE
+    description: "Proportion of HTS positive who were linked to ART"
+    numerator: TX_NEW
+    denominator: HTS_TST_POS
+    formula: "numerator / denominator"
+    outputType: percentage
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+
+  - name: TB_TX_GAP
+    description: "Gap between TB positive results returned and treatment started"
+    numerator: TB_RESULTS_RETURNED
+    denominator: TB_TX_STARTED
+    formula: "numerator - denominator"
+    outputType: count
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State

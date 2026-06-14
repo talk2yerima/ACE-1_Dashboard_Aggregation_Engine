@@ -1,0 +1,250 @@
+# Organization Unit Name Mappings
+# ─────────────────────────────────────────────────────────────────────────────
+# Primary lookup: datimCodes — keyed by the 11-char DATIM facility code.
+# This overrides anything in the states / lgas / facilities UID sections.
+#
+# Fallback lookup: states / lgas / facilities — keyed by raw DHIS2 UID.
+# Populate these sections from config/orgUnits-raw.csv (written on first run)
+# for any UIDs not covered by the datimCodes entries above.
+
+orgUnits:
+
+  # ── DATIMCode → { facility, state } ────────────────────────────────────────
+  # Prefixes: ad=Adamawa  bo=Borno  yo=Yobe  ta=Taraba
+
+  datimCodes:
+
+    # ── Adamawa ──────────────────────────────────────────────────────────────
+    W387n0fbylW:
+      facility: "Adamawa Hospital"
+      state: "Adamawa"
+    Pjak5oARJBf:
+      facility: "Borrong General Hospital"
+      state: "Adamawa"
+    RoxOslFYbmA:
+      facility: "Boshong Clinic and Maternity"
+      state: "Adamawa"
+    KrHj7Ycvctj:
+      facility: "Fufore Cottage Hospital"
+      state: "Adamawa"
+    J2AZkcaFst0:
+      facility: "G.D.Chanrai Memorial Hospital"
+      state: "Adamawa"
+    WjDvZSLT4i5:
+      facility: "Ganye General Hospital"
+      state: "Adamawa"
+    R2bNqBqJUIw:
+      facility: "Garkida General Hospital"
+      state: "Adamawa"
+    apo2hT9i94X:
+      facility: "Girei B Clinic"
+      state: "Adamawa"
+    x7TBWFDy1GZ:
+      facility: "Gulak Cottage Hospital"
+      state: "Adamawa"
+    wAZ9LXoASUu:
+      facility: "Guyuk General Hospital"
+      state: "Adamawa"
+    cVnKorgLC9B:
+      facility: "Hong Cottage Hospital"
+      state: "Adamawa"
+    l01zG9ePfqt:
+      facility: "Jada Township Clinic"
+      state: "Adamawa"
+    zxSXLppge0P:
+      facility: "Maiha Cottage Hospital"
+      state: "Adamawa"
+    hozfIkuo4eE:
+      facility: "Major Aminu Urban Health Centre"
+      state: "Adamawa"
+    S5HvxHdK2Vt:
+      facility: "Mayo Belwa Cottage Hospital"
+      state: "Adamawa"
+    DqWvsU2R8rw:
+      facility: "Mayo-Belwa Township Clinic"
+      state: "Adamawa"
+    Nx613mKHzsk:
+      facility: "Michika General Hospital"
+      state: "Adamawa"
+    XyFDmlevgCu:
+      facility: "Mubi General Hospital"
+      state: "Adamawa"
+    KXoSesiSLeE:
+      facility: "Numan General Hospital"
+      state: "Adamawa"
+    RRPYgMWYw4h:
+      facility: "Peace Hospital Jimeta"
+      state: "Adamawa"
+    qY7ZkVcos1O:
+      facility: "Song Cottage Hospital"
+      state: "Adamawa"
+    GbtTSJLBKbI:
+      facility: "St. Francis Hospital"
+      state: "Adamawa"
+    SSB1jXm3jdi:
+      facility: "Toungo Cottage Hospital"
+      state: "Adamawa"
+    gfEDfny3Hp0:
+      facility: "Wauro-Jabbe Health Centre"
+      state: "Adamawa"
+    RxLmSTf6Kpl:
+      facility: "Yola Federal Medical Centre"
+      state: "Adamawa"
+    DPA6BxE9pzQ:
+      facility: "Yola Specialist Hospital"
+      state: "Adamawa"
+
+    # ── Borno ─────────────────────────────────────────────────────────────────
+    RWQP4pGxyYS:
+      facility: "Askira General Hospital"
+      state: "Borno"
+    gF8UahvIXw9:
+      facility: "Biu General Hospital"
+      state: "Borno"
+    VZCEov8JZIe:
+      facility: "Briyel General Hospital"
+      state: "Borno"
+    o1xyfiaFzDG:
+      facility: "FHI360 Clinic, Banki IDP Camp"
+      state: "Borno"
+    oN0Woo9C7qb:
+      facility: "ISS IDP Camp Clinic Ngala"
+      state: "Borno"
+    gxpWWY8YvrW:
+      facility: "Konduga General Hospital"
+      state: "Borno"
+    bUhfkjY3yVP:
+      facility: "Lassa General Hospital"
+      state: "Borno"
+    fakjSY6P1ED:
+      facility: "Maiduguri State Specialist Hospital"
+      state: "Borno"
+    eJDSKTK7sO8:
+      facility: "Monguno General Hospital"
+      state: "Borno"
+    bxBIxJ7LJ4Q:
+      facility: "Muhammed Shuwa Memorial Hospital"
+      state: "Borno"
+    w4gxim2NiVj:
+      facility: "Umaru Shehu Ultra Modern Hospital"
+      state: "Borno"
+    FQ0Jc3pO5Op:
+      facility: "University of Maiduguri Teaching Hospital"
+      state: "Borno"
+
+    # ── Yobe ──────────────────────────────────────────────────────────────────
+    OQYeCajbh5G:
+      facility: "Fika General Hospital"
+      state: "Yobe"
+    VUQpWeYseot:
+      facility: "Gashua General Hospital"
+      state: "Yobe"
+    JcYmXdOSndf:
+      facility: "Geidem General Hospital"
+      state: "Yobe"
+    nX6ReqpEjKZ:
+      facility: "Jakusko General Hospital"
+      state: "Yobe"
+    LN72HGCti4v:
+      facility: "Nguru Federal Medical Centre"
+      state: "Yobe"
+    z6APuLTiHAX:
+      facility: "Potiskum General Hospital"
+      state: "Yobe"
+    sBzJ4tnvCMD:
+      facility: "Sani Abacha Specialist Hospital"
+      state: "Yobe"
+
+    # ── Taraba ────────────────────────────────────────────────────────────────
+    JPBcTpp6XUu:
+      facility: "Abubakar Barde First Referral Hospital"
+      state: "Taraba"
+    DVlcYRf680L:
+      facility: "Baissa First Referral Hospital"
+      state: "Taraba"
+    KTsdxBrj1K8:
+      facility: "Bali General Hospital"
+      state: "Taraba"
+    kwnTWvSacEg:
+      facility: "Bambur General Hospital"
+      state: "Taraba"
+    wSzsuzrAmU1:
+      facility: "Donga First Referral Hospital"
+      state: "Taraba"
+    wr9dSNAmnWp:
+      facility: "GECHAAN lifeline Center"
+      state: "Taraba"
+    FLdJ1UojpI5:
+      facility: "Gembu General Hospital"
+      state: "Taraba"
+    YFOBz4PMuNV:
+      facility: "Haruna Tsokwa Memorial General Hospital"
+      state: "Taraba"
+    DgTi7GSbUAE:
+      facility: "Ibi First Referral Hospital"
+      state: "Taraba"
+    Aocjg00w77E:
+      facility: "Jalingo Federal Medical Centre"
+      state: "Taraba"
+    iWJPpf18IyU:
+      facility: "Jalingo Government House Clinic"
+      state: "Taraba"
+    GHUokYisiZe:
+      facility: "Jinya Medical Centre"
+      state: "Taraba"
+    Uyo9Hpc3vql:
+      facility: "Kwararrafa Hospital"
+      state: "Taraba"
+    dlzwTad81iz:
+      facility: "Lau First Referral Hospital"
+      state: "Taraba"
+    sP8QEwb0SXo:
+      facility: "Mambila Baptist Hospital"
+      state: "Taraba"
+    KGNkYub5Oxq:
+      facility: "Mutum Biyu First Referral Hospital"
+      state: "Taraba"
+    rmGHrOrVW9r:
+      facility: "Rapah Hospital"
+      state: "Taraba"
+    qaVq74gMDhs:
+      facility: "Santa Maria Clinic"
+      state: "Taraba"
+    zZXDNWVezMV:
+      facility: "Serti First Referral Hospital"
+      state: "Taraba"
+    FWEjuDChsDH:
+      facility: "State Specialist Hospital"
+      state: "Taraba"
+    C8zbhPQNbPk:
+      facility: "Sun Shine Clinic Baissa"
+      state: "Taraba"
+    IvofjQjgSeE:
+      facility: "Sunkani First Referral Hospital"
+      state: "Taraba"
+    wC0drfSNmV4:
+      facility: "Ummah Clinic"
+      state: "Taraba"
+    RFVNndb3OKN:
+      facility: "United Methodist Church of Nigeria Rural Health Programme CSO"
+      state: "Taraba"
+    JqquBCRr5Ie:
+      facility: "Warwar General Hospital"
+      state: "Taraba"
+    q1D4GdFPtqJ:
+      facility: "Wukari Christian Reformed Church Of Nigeria Aids Action Committee"
+      state: "Taraba"
+    B0V6x5le9Tj:
+      facility: "Wukari General Hospital"
+      state: "Taraba"
+    wRBooaCoKz6:
+      facility: "Yakoko St. Monica Health Centre"
+      state: "Taraba"
+    M0b885TVP1Q:
+      facility: "Zing General Hospital"
+      state: "Taraba"
+
+  # ── UID fallbacks (populated from config/orgUnits-raw.csv after first run) ─
+  states: {}
+  lgas: {}
+  facilities: {}
