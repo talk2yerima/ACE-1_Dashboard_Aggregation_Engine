@@ -1,0 +1,38 @@
+# RADET Dashboard Indicators Configuration
+# Column names match sheetHeaders.yaml positional mappings.
+
+indicators:
+
+  - name: EXPECTED FOR REFILL
+    description: "Patients expected for ART refill (LastPickupDate + MonthsOfARVRefill)"
+    source: CombinedRADET
+    computedColumns:
+      - name: ExpectedRefillDate
+        formula: dateAdd
+        sourceColumn: LastPickupDate
+        addColumn: MonthsOfARVRefill
+        unit: month
+    periodColumn: ExpectedRefillDate
+    requiredColumns:
+      - LastPickupDate
+      - MonthsOfARVRefill
+      - ARTStartDate
+      - CurrentARTStatus
+      - Sex
+      - Age
+      - DATIMCode
+    filters:
+      - column: ExpectedRefillDate
+        operator: dateMode
+        value: DAILY
+      - column: CurrentARTStatus
+        operator: contains
+        value: "Active"
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex

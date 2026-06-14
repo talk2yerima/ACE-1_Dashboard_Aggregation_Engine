@@ -1,0 +1,50 @@
+# Dynamic UID calibration — frequency-rank to label mapping.
+#
+# ExcelJS streaming resolves shared-string indices differently across
+# process runs on large files. The engine does a fast pre-scan to count
+# distinct values, then assigns these labels in order from most-common to
+# least-common. Both passes run in the same process so UIDs are consistent.
+#
+# List labels in strict descending-frequency order (most common first).
+# Only the top N values (where N = length of this list) are mapped;
+# rarer values stay as-is and will fall through filters if not matched.
+
+categoryRanks:
+
+  # ── CombinedRADET ────────────────────────────────────────────────────────────
+
+  Sex:
+    - "Female"          # rank 1  ~67-75% (higher due to PMTCT)
+    - "Male"            # rank 2  ~25-33%
+
+  CurrentARTStatus:
+    - "Active"             # rank 1  ~49.8%
+    - "Lost to Follow-Up"  # rank 2  ~25.4%
+    - "Transferred Out"    # rank 3  ~10.2%
+    - "Stopped Treatment"  # rank 4  ~7.6%
+    - "Dead"               # rank 5  ~3.0%
+    - "Inactive"           # rank 6  ~1.6%
+
+  TBStatus:
+    - "Not a TB Case"   # rank 1  ~97.9%
+    - "Presumptive TB"  # rank 2  ~1.5%
+    - "TB Confirmed"    # rank 3  ~0.6%
+
+  ARTEnrollmentSetting:
+    - "Health Facility" # rank 1  ~95.5%
+    - "Community"       # rank 2  ~4.5%
+
+  CareEntryPoint:
+    - "OPD"                        # rank 1  ~49.4%
+    - "Community ART Refill Group" # rank 2  ~24.7%
+    - "Transfer In"                # rank 3  ~9.3%
+    - "PMTCT"                      # rank 4  ~6.8%
+    - "ANC"                        # rank 5  ~5.0%
+    - "TB Clinic"                  # rank 6  ~2.4%
+
+  # ── CombinedHTS ──────────────────────────────────────────────────────────────
+
+  FinalHIVTestResult:
+    - "Negative"        # rank 1  ~99.0%
+    - "Positive"        # rank 2  ~1.0%
+    - "Indeterminate"   # rank 3  <0.1%
