@@ -39,11 +39,20 @@ export interface ValidationIssue {
   message: string;
 }
 
+export interface ComputedColumnDef {
+  name: string;
+  formula: 'dateAdd';
+  sourceColumn: string;
+  addColumn: string;
+  unit: 'day' | 'week' | 'month' | 'year';
+}
+
 export interface IndicatorDef {
   name: string;
   description?: string;
   source: string;
   requiredColumns: string[];
+  computedColumns?: ComputedColumnDef[];
   filters: FilterDef[];
   groupBy: string[];
   aggregation: AggregationMethod;
@@ -369,6 +378,13 @@ export class AggregationEngine {
 
         this.stats.totalRows++;
 
+        // ── Apply computed columns for indicators on this sheet ──────────────
+        for (const ind of indicators) {
+          if (ind.computedColumns?.length) {
+            this.applyComputedColumns(record, ind.computedColumns);
+          }
+        }
+
         // ── Build frequency maps (suffix-normalised) ─────────────────────────
         for (const col of targetCols) {
           if (!(col in record)) continue;
@@ -681,6 +697,22 @@ export class AggregationEngine {
   }
 
   // ─── Private Helpers ─────────────────────────────────────────────────────
+
+  /** Adds derived date fields to a record using dateAdd formula. */
+  private applyComputedColumns(
+    record: Record<string, unknown>,
+    defs: ComputedColumnDef[],
+  ): void {
+    for (const def of defs) {
+      if (def.formula !== 'dateAdd') continue;
+      const baseDate = this.dateHelper.parse(record[def.sourceColumn]);
+      if (!baseDate) continue;
+      const addRaw = record[def.addColumn];
+      const addNum = typeof addRaw === 'number' ? addRaw : parseFloat(String(addRaw ?? ''));
+      if (isNaN(addNum) || addNum <= 0) continue;
+      record[def.name] = baseDate.add(addNum, def.unit).toDate();
+    }
+  }
 
   private resolveAccValue(acc: StreamAcc, ind: IndicatorDef): number {
     switch (ind.aggregation) {
