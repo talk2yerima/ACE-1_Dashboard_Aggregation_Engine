@@ -36,3 +36,31 @@ indicators:
       - AgeBand
     aggregation: COUNT
     disaggregation: Sex
+
+  - name: REFILL FROM EXPECTED
+    description: "Active patients who actually picked up ARVs on the target date (LastPickupDate = period date)"
+    source: CombinedRADET
+    periodColumn: LastPickupDate
+    requiredColumns:
+      - LastPickupDate
+      - MonthsOfARVRefill
+      - ARTStartDate
+      - CurrentARTStatus
+      - Sex
+      - Age
+      - DATIMCode
+    filters:
+      - column: LastPickupDate
+        operator: dateMode
+        value: DAILY
+      - column: CurrentARTStatus
+        operator: contains
+        value: "Active"
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
