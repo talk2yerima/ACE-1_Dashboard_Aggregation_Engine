@@ -1344,101 +1344,101 @@ indicators:
     aggregation: COUNT
     disaggregation: Sex
 
-  - name: VLSC
-    description: "Active patients who had viral load sample collected in the period"
-    source: CombinedRADET
-    periodColumn: DateOfVLSampleCollection
-    requiredColumns:
-      - DateOfVLSampleCollection
-      - CurrentARTStatus
-      - Sex
-      - Age
-      - Facility
-      - DATIMCode
-      - State
-    filters:
-      - column: DateOfVLSampleCollection
-        operator: dateMode
-        value: DAILY
-      - column: CurrentARTStatus
-        operator: contains
-        value: "Active"
-        caseSensitive: false
-    groupBy:
-      - Facility
-      - DATIMCode
-      - State
-      - Sex
-      - AgeBand
-    aggregation: COUNT
-    disaggregation: Sex
+  # - name: VLSC
+  #   description: "Active patients who had viral load sample collected in the period"
+  #   source: CombinedRADET
+  #   periodColumn: DateOfVLSampleCollection
+  #   requiredColumns:
+  #     - DateOfVLSampleCollection
+  #     - CurrentARTStatus
+  #     - Sex
+  #     - Age
+  #     - Facility
+  #     - DATIMCode
+  #     - State
+  #   filters:
+  #     - column: DateOfVLSampleCollection
+  #       operator: dateMode
+  #       value: DAILY
+  #     - column: CurrentARTStatus
+  #       operator: contains
+  #       value: "Active"
+  #       caseSensitive: false
+  #   groupBy:
+  #     - Facility
+  #     - DATIMCode
+  #     - State
+  #     - Sex
+  #     - AgeBand
+  #   aggregation: COUNT
+  #   disaggregation: Sex
 
-  - name: VL_Result_Received
-    description: "Active patients who received a viral load result in the period"
-    source: CombinedRADET
-    periodColumn: DateOfCurrentViralLoad
-    requiredColumns:
-      - DateOfCurrentViralLoad
-      - CurrentViralLoad
-      - CurrentARTStatus
-      - Sex
-      - Age
-      - Facility
-      - DATIMCode
-      - State
-    filters:
-      - column: DateOfCurrentViralLoad
-        operator: dateMode
-        value: DAILY
-      - column: CurrentViralLoad
-        operator: isNotNull
-      - column: CurrentARTStatus
-        operator: contains
-        value: "Active"
-        caseSensitive: false
-    groupBy:
-      - Facility
-      - DATIMCode
-      - State
-      - Sex
-      - AgeBand
-    aggregation: COUNT
-    disaggregation: Sex
+  # - name: VL_Result_Received
+  #   description: "Active patients who received a viral load result in the period"
+  #   source: CombinedRADET
+  #   periodColumn: DateOfCurrentViralLoad
+  #   requiredColumns:
+  #     - DateOfCurrentViralLoad
+  #     - CurrentViralLoad
+  #     - CurrentARTStatus
+  #     - Sex
+  #     - Age
+  #     - Facility
+  #     - DATIMCode
+  #     - State
+  #   filters:
+  #     - column: DateOfCurrentViralLoad
+  #       operator: dateMode
+  #       value: DAILY
+  #     - column: CurrentViralLoad
+  #       operator: isNotNull
+  #     - column: CurrentARTStatus
+  #       operator: contains
+  #       value: "Active"
+  #       caseSensitive: false
+  #   groupBy:
+  #     - Facility
+  #     - DATIMCode
+  #     - State
+  #     - Sex
+  #     - AgeBand
+  #   aggregation: COUNT
+  #   disaggregation: Sex
 
-  - name: VL_Suppressed
-    description: "Active patients with suppressed viral load (< 1000 copies/mL, including LDL/Undetectable)"
-    source: CombinedRADET
-    periodColumn: DateOfCurrentViralLoad
-    requiredColumns:
-      - DateOfCurrentViralLoad
-      - CurrentViralLoad
-      - CurrentARTStatus
-      - Sex
-      - Age
-      - Facility
-      - DATIMCode
-      - State
-    filters:
-      - column: DateOfCurrentViralLoad
-        operator: dateMode
-        value: DAILY
-      - column: CurrentViralLoad
-        operator: isNotNull
-      - column: CurrentViralLoad
-        operator: lessThan
-        value: 1000
-      - column: CurrentARTStatus
-        operator: contains
-        value: "Active"
-        caseSensitive: false
-    groupBy:
-      - Facility
-      - DATIMCode
-      - State
-      - Sex
-      - AgeBand
-    aggregation: COUNT
-    disaggregation: Sex
+  # - name: VL_Suppressed
+  #   description: "Active patients with suppressed viral load (< 1000 copies/mL, including LDL/Undetectable)"
+  #   source: CombinedRADET
+  #   periodColumn: DateOfCurrentViralLoad
+  #   requiredColumns:
+  #     - DateOfCurrentViralLoad
+  #     - CurrentViralLoad
+  #     - CurrentARTStatus
+  #     - Sex
+  #     - Age
+  #     - Facility
+  #     - DATIMCode
+  #     - State
+  #   filters:
+  #     - column: DateOfCurrentViralLoad
+  #       operator: dateMode
+  #       value: DAILY
+  #     - column: CurrentViralLoad
+  #       operator: isNotNull
+  #     - column: CurrentViralLoad
+  #       operator: lessThan
+  #       value: 1000
+  #     - column: CurrentARTStatus
+  #       operator: contains
+  #       value: "Active"
+  #       caseSensitive: false
+  #   groupBy:
+  #     - Facility
+  #     - DATIMCode
+  #     - State
+  #     - Sex
+  #     - AgeBand
+  #   aggregation: COUNT
+  #   disaggregation: Sex
 
   - name: VL_Unsuppressed
     description: "Active patients with unsuppressed viral load (>= 1000 copies/mL)"
