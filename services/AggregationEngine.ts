@@ -445,11 +445,15 @@ export class AggregationEngine {
           const rawComponents: Record<string, string> = {
             __period__: rowPeriod,
             __datim__:  rowDatim ?? '',
-            // Non-RADET sheets (e.g. HTS): the DATIMCode column IS the facility
-            // identifier.  Store the raw value so post-processing can display it
-            // even when it cannot be resolved to an orgUnit name.
+            // Non-RADET sheets (e.g. HTS): DATIMCode column is the facility
+            // identifier. Extract the 11-char DATIM prefix from compound values
+            // (e.g. "JPBcTpp6XUu_uuid" → "JPBcTpp6XUu"). normalizeOptionValue
+            // strips the prefix and keeps the UUID suffix — wrong for this field.
             __rawDatimCode__: sheetName !== 'CombinedRADET'
-              ? this.normalizeOptionValue(String(record['DATIMCode'] ?? '').trim())
+              ? (() => {
+                  const raw = String(record['DATIMCode'] ?? '').trim();
+                  return this.extractDatimFromCompound(raw) ?? raw;
+                })()
               : '',
           };
 
@@ -591,13 +595,15 @@ export class AggregationEngine {
           mapped['State']    = '';
           mapped['Facility'] = '';
           mapped['LGA']      = '';
-          // For non-RADET sheets the DATIMCode column is the facility identifier
-          // (not a patient ID), so show it as-is.  For RADET, col5 is a patient
-          // enrollment number — hide it.
+          // Only use __rawDatimCode__ if it is a proper 11-char DATIM UID.
+          // UUIDs (36-char hex) must never appear as DATIMCode in the output.
           const rawDatimCode = rawComponents['__rawDatimCode__'];
-          mapped['DATIMCode'] = rawDatimCode || '';
-          // If the raw DATIMCode resolves via the RADET cross-sheet map, pick up names
-          if (rawDatimCode) {
+          const isValidDatim = !!rawDatimCode &&
+            rawDatimCode.length === 11 &&
+            /^[A-Za-z][A-Za-z0-9]{10}$/.test(rawDatimCode);
+          mapped['DATIMCode'] = isValidDatim ? rawDatimCode : '';
+          // If the extracted DATIM resolves via the RADET cross-sheet map, pick up names
+          if (isValidDatim) {
             const rInfo = this.datimToFacility.get(rawDatimCode);
             if (rInfo) {
               mapped['Facility'] = rInfo.Facility;
