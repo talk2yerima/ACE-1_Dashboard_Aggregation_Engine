@@ -7,9 +7,11 @@ indicators:
   - name: UNSUPRESSED_VL
     description: "Active patients with unsuppressed viral load (VL > 1000) - cumulative"
     source: Sheet1
+    periodColumn: DateOfCurrentViralLoad
     requiredColumns:
       - CurrentViralLoad
       - CurrentARTStatus
+      - DateOfCurrentViralLoad
       - Sex
       - Age
       - DATIMCode
@@ -32,6 +34,7 @@ indicators:
   - name: UNSUPRESSED_STARTED_EAC
     description: "Active unsuppressed patients (VL > 1000) who started EAC - cumulative"
     source: Sheet1
+    periodColumn: DateOfCommencementOfEAC
     requiredColumns:
       - CurrentViralLoad
       - CurrentARTStatus
@@ -58,11 +61,13 @@ indicators:
     disaggregation: Sex
 
   - name: UNSUPRESSED_STARTED_EAC1
-    description: "Active unsuppressed patients who completed EAC session 1 - cumulative"
+    description: "Active unsuppressed patients who completed EAC session 1"
     source: Sheet1
+    periodColumn: DateOfCommencementOfEAC
     requiredColumns:
       - CurrentViralLoad
       - CurrentARTStatus
+      - DateOfCommencementOfEAC
       - NumberOfEACSessionsCompleted
       - Sex
       - Age
@@ -89,9 +94,11 @@ indicators:
   - name: UNSUPRESSED_STARTED_EAC2
     description: "Active unsuppressed patients who completed exactly EAC session 2"
     source: Sheet1
+    periodColumn: DateOfCommencementOfEAC
     requiredColumns:
       - CurrentViralLoad
       - CurrentARTStatus
+      - DateOfCommencementOfEAC
       - NumberOfEACSessionsCompleted
       - Sex
       - Age
@@ -118,9 +125,11 @@ indicators:
   - name: UNSUPRESSED_STARTED_EAC3
     description: "Active unsuppressed patients who completed exactly EAC session 3"
     source: Sheet1
+    periodColumn: DateOfCommencementOfEAC
     requiredColumns:
       - CurrentViralLoad
       - CurrentARTStatus
+      - DateOfCommencementOfEAC
       - NumberOfEACSessionsCompleted
       - Sex
       - Age
@@ -147,9 +156,11 @@ indicators:
   - name: UNSUPRESSED_EAC_COMPLETED
     description: "Active unsuppressed patients who completed full EAC course (>= 3 sessions)"
     source: Sheet1
+    periodColumn: DateOfCommencementOfEAC
     requiredColumns:
       - CurrentViralLoad
       - CurrentARTStatus
+      - DateOfCommencementOfEAC
       - NumberOfEACSessionsCompleted
       - Sex
       - Age
@@ -176,9 +187,11 @@ indicators:
   - name: POST_EAC_VIRAL_RESULT
     description: "Active unsuppressed patients who completed EAC (>=3 sessions) and have a repeat VL result recorded post-EAC"
     source: Sheet1
+    periodColumn: DateOfRepeatVLResultPostEAC
     requiredColumns:
       - CurrentViralLoad
       - CurrentARTStatus
+      - DateOfRepeatVLResultPostEAC
       - RepeatVLResultPostEAC
       - NumberOfEACSessionsCompleted
       - Sex
