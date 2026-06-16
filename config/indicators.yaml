@@ -1185,6 +1185,198 @@ indicators:
     aggregation: COUNT
     disaggregation: Sex
 
+  - name: TX_CURR_MMD1
+    description: "TX_CURR clients with 1 month ARV refill"
+    source: Sheet1
+    periodColumn: LastPickupDate
+    requiredColumns:
+      - MonthsOfARVRefill
+      - LastPickupDate
+      - CurrentARTStatus
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - Age
+    filters:
+      - column: CurrentARTStatus
+        operator: inList
+        value:
+          - "Active"
+          - "Active Restart"
+        caseSensitive: false
+      - column: MonthsOfARVRefill
+        operator: equals
+        value: "1"
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: TX_CURR_MMD2
+    description: "TX_CURR clients with 2 months ARV refill"
+    source: Sheet1
+    periodColumn: LastPickupDate
+    requiredColumns:
+      - MonthsOfARVRefill
+      - LastPickupDate
+      - CurrentARTStatus
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - Age
+    filters:
+      - column: CurrentARTStatus
+        operator: inList
+        value:
+          - "Active"
+          - "Active Restart"
+        caseSensitive: false
+      - column: MonthsOfARVRefill
+        operator: equals
+        value: "2"
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: TX_CURR_MMD3
+    description: "TX_CURR clients with 3 months ARV refill"
+    source: Sheet1
+    periodColumn: LastPickupDate
+    requiredColumns:
+      - MonthsOfARVRefill
+      - LastPickupDate
+      - CurrentARTStatus
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - Age
+    filters:
+      - column: CurrentARTStatus
+        operator: inList
+        value:
+          - "Active"
+          - "Active Restart"
+        caseSensitive: false
+      - column: MonthsOfARVRefill
+        operator: equals
+        value: "3"
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: TX_CURR_MMD4
+    description: "TX_CURR clients with 4 months ARV refill"
+    source: Sheet1
+    periodColumn: LastPickupDate
+    requiredColumns:
+      - MonthsOfARVRefill
+      - LastPickupDate
+      - CurrentARTStatus
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - Age
+    filters:
+      - column: CurrentARTStatus
+        operator: inList
+        value:
+          - "Active"
+          - "Active Restart"
+        caseSensitive: false
+      - column: MonthsOfARVRefill
+        operator: equals
+        value: "4"
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: TX_CURR_MMD5
+    description: "TX_CURR clients with 5 months ARV refill"
+    source: Sheet1
+    periodColumn: LastPickupDate
+    requiredColumns:
+      - MonthsOfARVRefill
+      - LastPickupDate
+      - CurrentARTStatus
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - Age
+    filters:
+      - column: CurrentARTStatus
+        operator: inList
+        value:
+          - "Active"
+          - "Active Restart"
+        caseSensitive: false
+      - column: MonthsOfARVRefill
+        operator: equals
+        value: "5"
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: TX_CURR_MMD6
+    description: "TX_CURR clients with 6 months or more ARV refill"
+    source: Sheet1
+    periodColumn: LastPickupDate
+    requiredColumns:
+      - MonthsOfARVRefill
+      - LastPickupDate
+      - CurrentARTStatus
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - Age
+    filters:
+      - column: CurrentARTStatus
+        operator: inList
+        value:
+          - "Active"
+          - "Active Restart"
+        caseSensitive: false
+      - column: MonthsOfARVRefill
+        operator: greaterThanOrEqual
+        value: 6
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
 # Formula-based indicators (calculated from other indicators)
 formulaIndicators:
 
