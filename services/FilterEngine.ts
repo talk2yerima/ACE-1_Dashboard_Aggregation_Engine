@@ -55,6 +55,14 @@ export class FilterEngine {
     return true;
   }
 
+  /** Returns true if the row passes AT LEAST ONE filter */
+  passesAny(row: Record<string, unknown>, filters: FilterDef[]): boolean {
+    for (const filter of filters) {
+      if (this.passes(row, filter)) return true;
+    }
+    return false;
+  }
+
   /** Returns true if the row passes a single filter */
   passes(row: Record<string, unknown>, filter: FilterDef): boolean {
     const raw = row[filter.column];

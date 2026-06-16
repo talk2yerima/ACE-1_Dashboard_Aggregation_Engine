@@ -45,6 +45,7 @@ export interface IndicatorDef {
   source: string;
   requiredColumns: string[];
   filters: FilterDef[];
+  anyOf?: FilterDef[];   // OR group: row counted if it passes at least one of these
   groupBy: string[];
   aggregation: AggregationMethod;
   disaggregation?: string;
@@ -107,7 +108,7 @@ export class AggregationEngine {
   private sheetHeaders!: Record<string, string[]>;
   private categoryRanksConfig!: { categoryRanks: Record<string, string[]> };
 
-  // Built from CombinedRADET during streaming; used to enrich HTS rows.
+  // Built from Sheet1 during streaming; used to enrich HTS rows.
   // Persisted across runs via datim-cache.json so coverage grows over time.
   private datimToFacility = new Map<string, { Facility: string; State: string }>();
   private datimCachePath = '';
@@ -229,7 +230,7 @@ export class AggregationEngine {
       return null;
     };
 
-    if (sheetName === 'CombinedRADET') {
+    if (sheetName === 'Sheet1') {
       // LGA columns are excluded: they embed compound UIDs from OTHER facilities
       // (e.g. the LGA a patient transferred from) and would produce wrong matches.
       const skipCols = new Set(['LGA', 'LGAOfResidence']);
@@ -304,6 +305,12 @@ export class AggregationEngine {
           .filter(f => f.operator !== 'dateMode')
           .map(f => f.column),
       );
+      // Also collect anyOf columns
+      for (const f of (ind.anyOf ?? [])) catFilters.add(f.column);
+      // Also capture ref columns used by dateDiff so they end up in rawComponents
+      for (const f of [...ind.filters, ...(ind.anyOf ?? [])]) {
+        if (f.ref) catFilters.add(f.ref);
+      }
       indFilterCols.set(ind.name, catFilters);
     }
 
@@ -383,7 +390,7 @@ export class AggregationEngine {
         const rowDatim = this.findFacilityDatim(record, sheetName);
 
         // Populate RADET cross-sheet lookup (used for HTS facility info)
-        if (sheetName === 'CombinedRADET' && rowDatim && !this.datimToFacility.has(rowDatim)) {
+        if (sheetName === 'Sheet1' && rowDatim && !this.datimToFacility.has(rowDatim)) {
           const ou = this.orgUnitHelper.lookupByDATIM(rowDatim);
           this.datimToFacility.set(rowDatim, {
             Facility: ou?.facility ?? '',
@@ -392,7 +399,7 @@ export class AggregationEngine {
         }
 
         // Collect raw org-unit data for the CSV diagnostic output
-        if (sheetName === 'CombinedRADET' && rowDatim && !orgUnitSeen.has(rowDatim)) {
+        if (sheetName === 'Sheet1' && rowDatim && !orgUnitSeen.has(rowDatim)) {
           orgUnitSeen.set(rowDatim, {
             stateRaw:    String(record['State']    ?? '').trim(),
             lgaRaw:      String(record['LGA']      ?? '').trim(),
@@ -432,7 +439,7 @@ export class AggregationEngine {
             // Non-RADET sheets (e.g. HTS): the DATIMCode column IS the facility
             // identifier.  Store the raw value so post-processing can display it
             // even when it cannot be resolved to an orgUnit name.
-            __rawDatimCode__: sheetName !== 'CombinedRADET'
+            __rawDatimCode__: sheetName !== 'Sheet1'
               ? this.normalizeOptionValue(String(record['DATIMCode'] ?? '').trim())
               : '',
           };
@@ -525,7 +532,8 @@ export class AggregationEngine {
       }
 
       // Categorical filters that apply to mapped values (exclude dateMode)
-      const catFilters = ind.filters.filter(f => f.operator !== 'dateMode');
+      const catFilters    = ind.filters.filter(f => f.operator !== 'dateMode');
+      const anyOfFilters  = ind.anyOf ?? [];
 
       // Final accumulator after mapping + re-grouping
       const finalAcc  = new Map<string, StreamAcc>();
@@ -591,10 +599,11 @@ export class AggregationEngine {
         }
 
         // ── Apply categorical filters on mapped values ─────────────────────────
-        if (catFilters.length > 0) {
+        if (catFilters.length > 0 || anyOfFilters.length > 0) {
           const passedStr: Record<string, unknown> = {};
           for (const [k, v] of Object.entries(mapped)) passedStr[k] = v;
-          if (!this.filterEngine.passesAll(passedStr, catFilters)) continue;
+          if (catFilters.length > 0 && !this.filterEngine.passesAll(passedStr, catFilters)) continue;
+          if (anyOfFilters.length > 0 && !this.filterEngine.passesAny(passedStr, anyOfFilters)) continue;
         }
 
         keptGroups++;
