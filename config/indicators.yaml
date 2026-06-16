@@ -85,6 +85,74 @@ indicators:
     aggregation: COUNT
     disaggregation: Sex
 
+  - name: TX_New_TB_Negative
+    description: "New ART patients (non-transfer) who were TB-screened and found negative"
+    source: CombinedRADET
+    periodColumn: ARTStartDate
+    requiredColumns:
+      - ARTStartDate
+      - CareEntryPoint
+      - TBStatus
+      - Sex
+      - Age
+      - Facility
+      - DATIMCode
+      - State
+    filters:
+      - column: ARTStartDate
+        operator: dateMode
+        value: DAILY
+      - column: CareEntryPoint
+        operator: notContains
+        value: "transfer"
+        caseSensitive: false
+      - column: TBStatus
+        operator: equals
+        value: "Not a TB Case"
+        caseSensitive: false
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: TX_New_Started_TPT
+    description: "New ART patients (non-transfer) who started TB Preventive Therapy"
+    source: CombinedRADET
+    periodColumn: ARTStartDate
+    requiredColumns:
+      - ARTStartDate
+      - CareEntryPoint
+      - DateOfTPTStart
+      - TPTType
+      - Sex
+      - Age
+      - Facility
+      - DATIMCode
+      - State
+    filters:
+      - column: ARTStartDate
+        operator: dateMode
+        value: DAILY
+      - column: CareEntryPoint
+        operator: notContains
+        value: "transfer"
+        caseSensitive: false
+      - column: DateOfTPTStart
+        operator: isNotNull
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+      - TPTType
+    aggregation: COUNT
+    disaggregation: Sex
+
   - name: TB_SCRN_CARE_NEW
     description: "New patients enrolled in HIV care (ART started and TB screened same day)"
     source: CombinedRADET
@@ -780,6 +848,17 @@ formulaIndicators:
     denominator: HTS_TST_POS
     formula: "numerator / denominator"
     outputType: percentage
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+
+  - name: TX_New_TPT_Gap
+    description: "New ART TB-negative patients who have not yet started TPT"
+    numerator: TX_New_TB_Negative
+    denominator: TX_New_Started_TPT
+    formula: "numerator - denominator"
+    outputType: count
     groupBy:
       - Facility
       - DATIMCode
