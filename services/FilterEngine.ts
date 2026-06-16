@@ -129,6 +129,19 @@ export class FilterEngine {
 
   private toNum(val: unknown): number {
     if (typeof val === 'number') return val;
-    return parseFloat(String(val));
+    
+    const str = String(val).trim();
+    if (!str || str === '' || str.toLowerCase() === 'notdetected') return 0;
+    
+    // Handle <50 format (< sign followed by number)
+    if (str.startsWith('<')) {
+      const numPart = str.substring(1).trim();
+      const parsed = parseFloat(numPart);
+      return isNaN(parsed) ? 0 : parsed;
+    }
+    
+    // Handle plain numbers like 5000 or 45.5, and comma-formatted like "1,936"
+    const parsed = parseFloat(str.replace(/,/g, ''));
+    return isNaN(parsed) ? 0 : parsed;
   }
 }

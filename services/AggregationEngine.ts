@@ -114,9 +114,10 @@ export class AggregationEngine {
 
   private indicatorsConfig!: IndicatorsConfig;
   private sheetHeaders!: Record<string, string[]>;
+  private skipFirstRowSheets: Set<string> = new Set();
   private categoryRanksConfig!: { categoryRanks: Record<string, string[]> };
 
-  // Built from CombinedRADET during streaming; used to enrich HTS rows.
+  // Built from Sheet1 during streaming; used to enrich HTS rows.
   // Persisted across runs via datim-cache.json so coverage grows over time.
   private datimToFacility = new Map<string, { Facility: string; State: string }>();
   private datimCachePath = '';
@@ -156,7 +157,19 @@ export class AggregationEngine {
     );
 
     const headersYaml = fs.readFileSync(path.join(this.options.configDir, 'sheetHeaders.yaml'), 'utf8');
-    this.sheetHeaders = yaml.load(headersYaml) as Record<string, string[]>;
+    const headersRaw = yaml.load(headersYaml) as Record<string, string[] | { columns: string[]; skipFirstRow?: boolean }>;
+    // Normalise: support both plain array and {columns, skipFirstRow} object forms
+    this.sheetHeaders = {};
+    for (const [sheet, val] of Object.entries(headersRaw)) {
+      if (Array.isArray(val)) {
+        this.sheetHeaders[sheet] = val;
+      } else if (val && typeof val === 'object' && 'columns' in val) {
+        this.sheetHeaders[sheet] = (val as { columns: string[] }).columns;
+        if ((val as { skipFirstRow?: boolean }).skipFirstRow) {
+          this.skipFirstRowSheets.add(sheet);
+        }
+      }
+    }
     this.logger.info(
       `AggregationEngine: loaded positional headers for: [${Object.keys(this.sheetHeaders).join(', ')}]`,
     );
@@ -238,7 +251,7 @@ export class AggregationEngine {
       return null;
     };
 
-    if (sheetName === 'CombinedRADET') {
+    if (sheetName === 'Sheet1') {
       // LGA columns are excluded: they embed compound UIDs from OTHER facilities
       // (e.g. the LGA a patient transferred from) and would produce wrong matches.
       const skipCols = new Set(['LGA', 'LGAOfResidence']);
@@ -331,7 +344,7 @@ export class AggregationEngine {
 
     const reader = new ExcelJS.stream.xlsx.WorkbookReader(
       this.options.workbookPath,
-      { sharedStrings: 'cache', styles: 'cache', hyperlinks: 'ignore', worksheets: 'emit' },
+      { sharedStrings: 'cache', styles: 'ignore', hyperlinks: 'ignore', worksheets: 'emit' },
     );
     reader.read();
 
@@ -348,19 +361,27 @@ export class AggregationEngine {
 
       const predefined = this.sheetHeaders[sheetName] as string[] | undefined;
       const headers: string[] = predefined ? ['', ...predefined] : [];
-      let isFirstRow = !predefined;
+      // isFirstRow: true when we need to read headers from row 1 (no predefined),
+      // OR when the sheet has predefined headers but also a header row to skip.
+      let isFirstRow = !predefined || this.skipFirstRowSheets.has(sheetName);
 
       this.logger.info(
         `  Streaming sheet: ${sheetName} (${indicators.map(i => i.name).join(', ')})` +
         (predefined ? ` [${predefined.length} positional cols]` : ' [first-row headers]'),
       );
 
+      const skipRow1WithPredefined = this.skipFirstRowSheets.has(sheetName);
+
       for await (const row of worksheetReader) {
         if (isFirstRow) {
           isFirstRow = false;
-          (row as ExcelJS.Row).eachCell((cell, col) => {
-            headers[col] = String(cell.value ?? '').trim();
-          });
+          if (!skipRow1WithPredefined) {
+            // No predefined headers: read column names from this row
+            (row as ExcelJS.Row).eachCell((cell, col) => {
+              headers[col] = String(cell.value ?? '').trim();
+            });
+          }
+          // skipRow1WithPredefined: predefined headers are already set — just skip this row
           continue;
         }
 
@@ -399,7 +420,7 @@ export class AggregationEngine {
         const rowDatim = this.findFacilityDatim(record, sheetName);
 
         // Populate RADET cross-sheet lookup (used for HTS facility info)
-        if (sheetName === 'CombinedRADET' && rowDatim && !this.datimToFacility.has(rowDatim)) {
+        if (sheetName === 'Sheet1' && rowDatim && !this.datimToFacility.has(rowDatim)) {
           const ou = this.orgUnitHelper.lookupByDATIM(rowDatim);
           this.datimToFacility.set(rowDatim, {
             Facility: ou?.facility ?? '',
@@ -408,7 +429,7 @@ export class AggregationEngine {
         }
 
         // Collect raw org-unit data for the CSV diagnostic output
-        if (sheetName === 'CombinedRADET' && rowDatim && !orgUnitSeen.has(rowDatim)) {
+        if (sheetName === 'Sheet1' && rowDatim && !orgUnitSeen.has(rowDatim)) {
           orgUnitSeen.set(rowDatim, {
             stateRaw:    String(record['State']    ?? '').trim(),
             lgaRaw:      String(record['LGA']      ?? '').trim(),
@@ -448,7 +469,7 @@ export class AggregationEngine {
             // Non-RADET sheets (e.g. HTS): the DATIMCode column IS the facility
             // identifier.  Store the raw value so post-processing can display it
             // even when it cannot be resolved to an orgUnit name.
-            __rawDatimCode__: sheetName !== 'CombinedRADET'
+            __rawDatimCode__: sheetName !== 'Sheet1'
               ? this.normalizeOptionValue(String(record['DATIMCode'] ?? '').trim())
               : '',
           };

@@ -1,32 +1,24 @@
 # RADET Dashboard Indicators Configuration
 # Column names match sheetHeaders.yaml positional mappings.
+# All indicators are cumulative totals for Active patients (no date restriction).
 
 indicators:
 
-  - name: EXPECTED FOR REFILL
-    description: "Patients expected for ART refill (LastPickupDate + MonthsOfARVRefill)"
-    source: CombinedRADET
-    computedColumns:
-      - name: ExpectedRefillDate
-        formula: dateAdd
-        sourceColumn: LastPickupDate
-        addColumn: MonthsOfARVRefill
-        unit: month
-    periodColumn: ExpectedRefillDate
+  - name: UNSUPRESSED_VL
+    description: "Active patients with unsuppressed viral load (VL > 1000) - cumulative"
+    source: Sheet1
     requiredColumns:
-      - LastPickupDate
-      - MonthsOfARVRefill
-      - ARTStartDate
+      - CurrentViralLoad
       - CurrentARTStatus
       - Sex
       - Age
       - DATIMCode
     filters:
-      - column: ExpectedRefillDate
-        operator: dateMode
-        value: DAILY
+      - column: CurrentViralLoad
+        operator: greaterThan
+        value: 1000
       - column: CurrentARTStatus
-        operator: contains
+        operator: equals
         value: "Active"
     groupBy:
       - Facility
@@ -37,25 +29,112 @@ indicators:
     aggregation: COUNT
     disaggregation: Sex
 
-  - name: REFILL FROM EXPECTED
-    description: "Active patients who actually picked up ARVs on the target date (LastPickupDate = period date)"
-    source: CombinedRADET
-    periodColumn: LastPickupDate
+  - name: UNSUPRESSED_STARTED_EAC
+    description: "Active unsuppressed patients (VL > 1000) who started EAC - cumulative"
+    source: Sheet1
     requiredColumns:
-      - LastPickupDate
-      - MonthsOfARVRefill
-      - ARTStartDate
+      - CurrentViralLoad
       - CurrentARTStatus
+      - DateOfCommencementOfEAC
       - Sex
       - Age
       - DATIMCode
     filters:
-      - column: LastPickupDate
-        operator: dateMode
-        value: DAILY
+      - column: CurrentViralLoad
+        operator: greaterThan
+        value: 1000
       - column: CurrentARTStatus
-        operator: contains
+        operator: equals
         value: "Active"
+      - column: DateOfCommencementOfEAC
+        operator: isNotNull
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: UNSUPRESSED_STARTED_EAC1
+    description: "Active unsuppressed patients who completed EAC session 1 - cumulative"
+    source: Sheet1
+    requiredColumns:
+      - CurrentViralLoad
+      - CurrentARTStatus
+      - NumberOfEACSessionsCompleted
+      - Sex
+      - Age
+      - DATIMCode
+    filters:
+      - column: CurrentViralLoad
+        operator: greaterThan
+        value: 1000
+      - column: CurrentARTStatus
+        operator: equals
+        value: "Active"
+      - column: NumberOfEACSessionsCompleted
+        operator: equals
+        value: 1
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: UNSUPRESSED_STARTED_EAC2
+    description: "Active unsuppressed patients who completed exactly EAC session 2"
+    source: Sheet1
+    requiredColumns:
+      - CurrentViralLoad
+      - CurrentARTStatus
+      - NumberOfEACSessionsCompleted
+      - Sex
+      - Age
+      - DATIMCode
+    filters:
+      - column: CurrentViralLoad
+        operator: greaterThan
+        value: 1000
+      - column: CurrentARTStatus
+        operator: equals
+        value: "Active"
+      - column: NumberOfEACSessionsCompleted
+        operator: equals
+        value: 2
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: UNSUPRESSED_STARTED_EAC3
+    description: "Active unsuppressed patients who completed exactly EAC session 3"
+    source: Sheet1
+    requiredColumns:
+      - CurrentViralLoad
+      - CurrentARTStatus
+      - NumberOfEACSessionsCompleted
+      - Sex
+      - Age
+      - DATIMCode
+    filters:
+      - column: CurrentViralLoad
+        operator: greaterThan
+        value: 1000
+      - column: CurrentARTStatus
+        operator: equals
+        value: "Active"
+      - column: NumberOfEACSessionsCompleted
+        operator: equals
+        value: 3
     groupBy:
       - Facility
       - DATIMCode
