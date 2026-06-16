@@ -29,7 +29,7 @@ indicators:
     aggregation: COUNT
     disaggregation: Sex
 
-  - name: NEWLY_ENROLLED
+  - name: Newly_Enrolled
     description: "Newly enrolled patients on ART"
     source: CombinedRADET
     periodColumn: EnrollmentDate
@@ -55,7 +55,7 @@ indicators:
     aggregation: COUNT
     disaggregation: Sex
 
-  - name: TX_NEW
+  - name: TX_New
     description: "Newly initiated on ART (excluding transfers)"
     source: CombinedRADET
     periodColumn: ARTStartDate
@@ -153,7 +153,7 @@ indicators:
     aggregation: COUNT
     disaggregation: Sex
 
-  - name: TB_SCRN_CARE_NEW
+  - name: TB_Scrn_Care_New
     description: "New patients enrolled in HIV care (ART started and TB screened)"
     source: CombinedRADET
     periodColumn: ARTStartDate
@@ -181,7 +181,7 @@ indicators:
     aggregation: COUNT
     disaggregation: Sex
 
-  - name: CARE_NEW_PRESUMPTIVE
+  - name: Care New_Presumptive_TB
     description: "New ART patients (non-transfer) with Presumptive TB"
     source: CombinedRADET
     periodColumn: ARTStartDate
@@ -214,7 +214,7 @@ indicators:
     aggregation: COUNT
     disaggregation: Sex
 
-  - name: TB_SAMPLE_COLLECTED
+  - name: TB_Sample_Collected
     description: "Active patients with presumptive TB who had sample collected"
     source: CombinedRADET
     periodColumn: DateOfTBSampleCollection
@@ -250,7 +250,7 @@ indicators:
     aggregation: COUNT
     disaggregation: Sex
 
-  - name: TB_RESULTS_RETURNED
+  - name: TB_Results_Returned
     description: "TB results returned to patients"
     source: CombinedRADET
     periodColumn: DateOfTBResultReturn
@@ -274,7 +274,7 @@ indicators:
     aggregation: COUNT
     disaggregation: Sex
 
-  - name: TB_TX_STARTED
+  - name: TB_TX_Started
     description: "TB patients who started treatment"
     source: CombinedRADET
     periodColumn: TBTreatmentStartDate
@@ -772,7 +772,7 @@ indicators:
     aggregation: COUNT
     disaggregation: Sex
 
-  - name: EXPECTED_FOR_REFILL
+  - name: Expected for Refill
     description: "Patients expected for ART refill (LastPickupDate + MonthsOfARVRefill)"
     source: CombinedRADET
     computedColumns:
@@ -806,7 +806,7 @@ indicators:
     aggregation: COUNT
     disaggregation: Sex
 
-  - name: REFILL_FROM_EXPECTED
+  - name: Refilled from Expected
     description: "Active patients who actually picked up ARVs on the target date"
     source: CombinedRADET
     periodColumn: LastPickupDate
@@ -836,7 +836,7 @@ indicators:
 
   # ── TX_PVLS (Viral Load Suppression) — PEPFAR indicators ─────────────────
 
-  - name: VL_SAMPLE_COLLECTED
+  - name: VL_Sample_Collected
     description: "Active patients with VL Sample Collection in current FY"
     source: CombinedRADET
     periodColumn: DateOfVLSampleCollection
@@ -905,7 +905,7 @@ indicators:
     aggregation: COUNT
     disaggregation: Sex
 
-  - name: PVLSD
+  - name: VL Result Received_PVLSD
     description: "ART patients with documented VL result in FY on ART >= 6 months (denominator)"
     source: CombinedRADET
     periodColumn: DateOfCurrentViralLoad
@@ -940,7 +940,7 @@ indicators:
     aggregation: COUNT
     disaggregation: Sex
 
-  - name: VL_SAMPLE_COLLECTED_pregnant_Women
+  - name: VL_Sample_Collected_Pregnant_Women
     description: "Active pregnant/breastfeeding women with VL Sample Collection in FY"
     source: CombinedRADET
     periodColumn: DateOfVLSampleCollection
@@ -1064,7 +1064,7 @@ indicators:
     aggregation: COUNT
     disaggregation: Sex
 
-  - name: VL_SAMPLE_COLLECTED_Children_lessthan_20yrs
+  - name: VL_Sample_Collected_Children_lessthan_20yrs
     description: "Active children under 20yrs with VL Sample Collection in FY"
     source: CombinedRADET
     periodColumn: DateOfVLSampleCollection
@@ -1643,7 +1643,7 @@ indicators:
 
   # ── Unsuppressed VL + EAC cascade (shedrackfelix) ───────────────────────
 
-  - name: UNSUPPRESSED_VL
+  - name: Unsuppressed_VL
     description: "Active patients with unsuppressed viral load (VL >= 1000 copies/ml)"
     source: CombinedRADET
     periodColumn: DateOfCurrentViralLoad
@@ -1675,7 +1675,7 @@ indicators:
     aggregation: COUNT
     disaggregation: Sex
 
-  - name: UNSUPPRESSED_STARTED_EAC
+  - name: Unsuppressed_Started_EAC
     description: "Unsuppressed active patients (VL >= 1000) who commenced EAC"
     source: CombinedRADET
     periodColumn: DateOfCommencementOfEAC
@@ -1709,7 +1709,7 @@ indicators:
     aggregation: COUNT
     disaggregation: Sex
 
-  - name: UNSUPPRESSED_STARTED_EAC1
+  - name: Unsuppressed_Started_EAC1
     description: "Unsuppressed active patients who completed at least 1 EAC session"
     source: CombinedRADET
     periodColumn: DateOfCommencementOfEAC
@@ -1744,7 +1744,7 @@ indicators:
     aggregation: COUNT
     disaggregation: Sex
 
-  - name: UNSUPPRESSED_STARTED_EAC2
+  - name: Unsuppressed_Started_EAC2
     description: "Unsuppressed active patients who completed at least 2 EAC sessions"
     source: CombinedRADET
     periodColumn: DateOfCommencementOfEAC
@@ -1779,7 +1779,7 @@ indicators:
     aggregation: COUNT
     disaggregation: Sex
 
-  - name: UNSUPPRESSED_STARTED_EAC3
+  - name: Unsuppressed_Started_EAC3
     description: "Unsuppressed active patients who completed at least 3 EAC sessions"
     source: CombinedRADET
     periodColumn: DateOfCommencementOfEAC
@@ -1805,6 +1805,257 @@ indicators:
       - column: NumberOfEACSessionsCompleted
         operator: greaterThanOrEqual
         value: 3
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: Post_EAC_Viral_Result
+    description: "Unsuppressed active patients who completed EAC (>= 3 sessions) and have a repeat VL result recorded post-EAC"
+    source: CombinedRADET
+    periodColumn: DateOfRepeatVLResultPostEAC
+    requiredColumns:
+      - CurrentViralLoad
+      - CurrentARTStatus
+      - NumberOfEACSessionsCompleted
+      - RepeatVLResultPostEAC
+      - DateOfRepeatVLResultPostEAC
+      - Sex
+      - Age
+      - Facility
+      - DATIMCode
+      - State
+    filters:
+      - column: CurrentARTStatus
+        operator: contains
+        value: "Active"
+        caseSensitive: false
+      - column: CurrentViralLoad
+        operator: isNotNull
+      - column: CurrentViralLoad
+        operator: greaterThanOrEqual
+        value: 1000
+      - column: NumberOfEACSessionsCompleted
+        operator: greaterThanOrEqual
+        value: 3
+      - column: RepeatVLResultPostEAC
+        operator: isNotNull
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  # ── TX_CURR Multi-Month Dispensing (uakume) ───────────────────────────────
+
+  - name: TX_CURR_MMD1
+    description: "Active patients on 1-month ARV refill"
+    source: CombinedRADET
+    periodColumn: LastPickupDate
+    requiredColumns:
+      - MonthsOfARVRefill
+      - LastPickupDate
+      - CurrentARTStatus
+      - Sex
+      - Age
+      - Facility
+      - DATIMCode
+      - State
+    filters:
+      - column: CurrentARTStatus
+        operator: inList
+        value:
+          - "Active"
+          - "Active Restart"
+        caseSensitive: false
+      - column: LastPickupDate
+        operator: dateinRange
+        value: CurrentFY
+      - column: MonthsOfARVRefill
+        operator: equals
+        value: 1
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: TX_CURR_MMD2
+    description: "Active patients on 2-month ARV refill"
+    source: CombinedRADET
+    periodColumn: LastPickupDate
+    requiredColumns:
+      - MonthsOfARVRefill
+      - LastPickupDate
+      - CurrentARTStatus
+      - Sex
+      - Age
+      - Facility
+      - DATIMCode
+      - State
+    filters:
+      - column: CurrentARTStatus
+        operator: inList
+        value:
+          - "Active"
+          - "Active Restart"
+        caseSensitive: false
+      - column: LastPickupDate
+        operator: dateinRange
+        value: CurrentFY
+      - column: MonthsOfARVRefill
+        operator: equals
+        value: 2
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: TX_CURR_MMD3
+    description: "Active patients on 3-month ARV refill"
+    source: CombinedRADET
+    periodColumn: LastPickupDate
+    requiredColumns:
+      - MonthsOfARVRefill
+      - LastPickupDate
+      - CurrentARTStatus
+      - Sex
+      - Age
+      - Facility
+      - DATIMCode
+      - State
+    filters:
+      - column: CurrentARTStatus
+        operator: inList
+        value:
+          - "Active"
+          - "Active Restart"
+        caseSensitive: false
+      - column: LastPickupDate
+        operator: dateinRange
+        value: CurrentFY
+      - column: MonthsOfARVRefill
+        operator: equals
+        value: 3
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: TX_CURR_MMD4
+    description: "Active patients on 4-month ARV refill"
+    source: CombinedRADET
+    periodColumn: LastPickupDate
+    requiredColumns:
+      - MonthsOfARVRefill
+      - LastPickupDate
+      - CurrentARTStatus
+      - Sex
+      - Age
+      - Facility
+      - DATIMCode
+      - State
+    filters:
+      - column: CurrentARTStatus
+        operator: inList
+        value:
+          - "Active"
+          - "Active Restart"
+        caseSensitive: false
+      - column: LastPickupDate
+        operator: dateinRange
+        value: CurrentFY
+      - column: MonthsOfARVRefill
+        operator: equals
+        value: 4
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: TX_CURR_MMD5
+    description: "Active patients on 5-month ARV refill"
+    source: CombinedRADET
+    periodColumn: LastPickupDate
+    requiredColumns:
+      - MonthsOfARVRefill
+      - LastPickupDate
+      - CurrentARTStatus
+      - Sex
+      - Age
+      - Facility
+      - DATIMCode
+      - State
+    filters:
+      - column: CurrentARTStatus
+        operator: inList
+        value:
+          - "Active"
+          - "Active Restart"
+        caseSensitive: false
+      - column: LastPickupDate
+        operator: dateinRange
+        value: CurrentFY
+      - column: MonthsOfARVRefill
+        operator: equals
+        value: 5
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: TX_CURR_MMD6
+    description: "Active patients on 6 or more months ARV refill"
+    source: CombinedRADET
+    periodColumn: LastPickupDate
+    requiredColumns:
+      - MonthsOfARVRefill
+      - LastPickupDate
+      - CurrentARTStatus
+      - Sex
+      - Age
+      - Facility
+      - DATIMCode
+      - State
+    filters:
+      - column: CurrentARTStatus
+        operator: inList
+        value:
+          - "Active"
+          - "Active Restart"
+        caseSensitive: false
+      - column: LastPickupDate
+        operator: dateinRange
+        value: CurrentFY
+      - column: MonthsOfARVRefill
+        operator: greaterThanOrEqual
+        value: 6
     groupBy:
       - Facility
       - DATIMCode
