@@ -2,7 +2,7 @@
 # Each array entry maps to a column by position (index 0 = col 1).
 # Columns not needed for any indicator can be given a short placeholder name.
 
-Sheet1:
+CombinedRADET:
   - State                               # 1
   - LGA                                 # 2
   - LGAOfResidence                      # 3
@@ -95,7 +95,7 @@ Sheet1:
   - NumberOfFingersRecaptured           # 90
   - CaseManager                         # 91
 
-Sheet2:
+CombinedHTS:
   - DATIMCode        # 1
   - PatientId        # 2
   - Sex              # 3

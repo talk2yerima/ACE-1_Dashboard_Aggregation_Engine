@@ -311,7 +311,7 @@ export class AggregationEngine {
       const catFilters = new Set(
         ind.filters
           .filter(f => f.operator !== 'dateMode')
-          .map(f => f.column),
+          .flatMap(f => [f.column, ...(f.ref ? [f.ref] : [])]),
       );
       indFilterCols.set(ind.name, catFilters);
     }

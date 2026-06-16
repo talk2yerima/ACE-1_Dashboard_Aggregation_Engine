@@ -18,12 +18,13 @@ categoryRanks:
     - "Male"            # rank 2  ~25-33%
 
   CurrentARTStatus:
-    - "Active"             # rank 1  ~49.8%
-    - "IIT"                # rank 2  ~25.4%
-    - "Transferred Out"    # rank 3  ~10.2%
-    - "Died"               # rank 4  ~7.6%
-    - "Invalid"            # rank 5  ~3.0%
-    - "Biometric Naive"    # rank 6  ~1.6%
+    - "Active"              # rank 1  ~49.8%
+    - "IIT"                 # rank 2  ~25.4%
+    - "Transferred Out"     # rank 3  ~10.2%
+    - "Died"                # rank 4  ~7.6%
+    - "Invalid"             # rank 5  ~3.0%
+    - "Biometric Naive"     # rank 6  ~1.6%
+    - "Stopped Treatment"   # rank 7  (if present as distinct 7th value)
 
   TBStatus:
     - "Not a TB Case"   # rank 1  ~97.9%

@@ -5,7 +5,7 @@ indicators:
 
   - name: HTS_TST_POS
     description: "Number of individuals who tested HIV positive"
-    source: Sheet2
+    source: CombinedHTS
     periodColumn: DateOfHIVTesting
     requiredColumns:
       - FinalHIVTestResult
@@ -31,7 +31,7 @@ indicators:
 
   - name: NEWLY_ENROLLED
     description: "Newly enrolled patients on ART"
-    source: Sheet1
+    source: CombinedRADET
     periodColumn: EnrollmentDate
     requiredColumns:
       - EnrollmentDate
@@ -57,7 +57,7 @@ indicators:
 
   - name: TX_NEW
     description: "Newly initiated on ART (excluding transfers)"
-    source: Sheet1
+    source: CombinedRADET
     periodColumn: ARTStartDate
     requiredColumns:
       - ARTStartDate
@@ -87,7 +87,7 @@ indicators:
 
   - name: TB_SCRN_CARE_NEW
     description: "New patients enrolled in HIV care (ART started and TB screened same day)"
-    source: Sheet1
+    source: CombinedRADET
     periodColumn: ARTStartDate
     requiredColumns:
       - DateOfTBScreening
@@ -115,7 +115,7 @@ indicators:
 
   - name: CARE_NEW_PRESUMPTIVE
     description: "Active patients with presumptive TB screened today"
-    source: Sheet1
+    source: CombinedRADET
     periodColumn: DateOfTBScreening
     requiredColumns:
       - CurrentARTStatus
@@ -152,7 +152,7 @@ indicators:
 
   - name: TB_SAMPLE_COLLECTED
     description: "Active patients with presumptive TB who had sample collected"
-    source: Sheet1
+    source: CombinedRADET
     periodColumn: DateOfTBSampleCollection
     requiredColumns:
       - CurrentARTStatus
@@ -189,7 +189,7 @@ indicators:
 
   - name: TB_RESULTS_RETURNED
     description: "TB results returned to patients"
-    source: Sheet1
+    source: CombinedRADET
     periodColumn: DateOfTBResultReturn
     requiredColumns:
       - DateOfTBResultReturn
@@ -213,7 +213,7 @@ indicators:
 
   - name: TB_TX_STARTED
     description: "TB patients who started treatment"
-    source: Sheet1
+    source: CombinedRADET
     periodColumn: TBTreatmentStartDate
     requiredColumns:
       - TBTreatmentStartDate
@@ -237,7 +237,7 @@ indicators:
 
   - name: Death_by_TX_NEW
     description: "Death Among Newly initiated on ART (excluding transfers)"
-    source: Sheet1
+    source: CombinedRADET
     periodColumn: DateOfCurrentARTStatus
     requiredColumns:
       - ARTStartDate
@@ -276,7 +276,7 @@ indicators:
 
   - name: Death_by_TX_CURR
     description: "Death Among Active on ART (excluding TX_New)"
-    source: Sheet1
+    source: CombinedRADET
     periodColumn: DateOfCurrentARTStatus
     requiredColumns:
       - CurrentARTStatus
@@ -315,7 +315,7 @@ indicators:
 
   - name: Total_Death
     description: "Total death in FY"
-    source: Sheet1
+    source: CombinedRADET
     periodColumn: DateOfCurrentARTStatus
     requiredColumns:
       - CurrentARTStatus
@@ -344,7 +344,7 @@ indicators:
 
   - name: Total_TX_ML
     description: "Total TX_ML in FY"
-    source: Sheet1
+    source: CombinedRADET
     periodColumn: DateOfCurrentARTStatus
     requiredColumns:
       - CurrentARTStatus
@@ -376,7 +376,7 @@ indicators:
 
   - name: Total_IIT
     description: "Total IIT in FY"
-    source: Sheet1
+    source: CombinedRADET
     periodColumn: DateOfCurrentARTStatus
     requiredColumns:
       - CurrentARTStatus
@@ -406,7 +406,7 @@ indicators:
 
   - name: Total_Stopped_treatment 
     description: "Total Stopped Treatment in FY"
-    source: Sheet1
+    source: CombinedRADET
     periodColumn: DateOfCurrentARTStatus
     requiredColumns:
       - CurrentARTStatus
@@ -436,7 +436,7 @@ indicators:
 
   - name: Total_Transferred_out 
     description: "Total Transferred Out in FY"
-    source: Sheet1
+    source: CombinedRADET
     periodColumn: DateOfCurrentARTStatus
     requiredColumns:
       - CurrentARTStatus
@@ -466,7 +466,7 @@ indicators:
 
   - name: Total_Invalid_Outcome
     description: "Total Invalid Outcome in FY"
-    source: Sheet1
+    source: CombinedRADET
     periodColumn: DateOfCurrentARTStatus
     requiredColumns:
       - CurrentARTStatus
@@ -497,7 +497,7 @@ indicators:
 
   - name: IIT_by_lt3months_refill
     description: "IIT by months of refill less than 3 months"
-    source: Sheet1
+    source: CombinedRADET
     periodColumn: DateOfCurrentARTStatus
     requiredColumns:
       - CurrentARTStatus
@@ -532,7 +532,7 @@ indicators:
 
   - name: IIT_by_3to5months_refill
     description: "IIT by months of refill between 3 and 5 months"
-    source: Sheet1
+    source: CombinedRADET
     periodColumn: DateOfCurrentARTStatus
     requiredColumns:
       - CurrentARTStatus
@@ -570,7 +570,7 @@ indicators:
 
   - name: IIT_by_gtr6months_refill
     description: "IIT by months of refill greaterequalto than 6 months"
-    source: Sheet1
+    source: CombinedRADET
     periodColumn: DateOfCurrentARTStatus
     requiredColumns:
       - CurrentARTStatus
@@ -604,7 +604,7 @@ indicators:
 
   - name: Transfer_Out_by_lt3months_refill
     description: "Transfer Out by months of refill less than 3 months"
-    source: Sheet1
+    source: CombinedRADET
     periodColumn: DateOfCurrentARTStatus
     requiredColumns:
       - CurrentARTStatus
@@ -639,7 +639,7 @@ indicators:
 
   - name: Transfer_Out_by_3to5months_refill
     description: "Transfer Out by months of refill between 3 and 5 months"
-    source: Sheet1
+    source: CombinedRADET
     periodColumn: DateOfCurrentARTStatus
     requiredColumns:
       - CurrentARTStatus
@@ -677,7 +677,7 @@ indicators:
 
   - name: Transfer_Out_by_gtr6months_refill
     description: "Transfer Out by months of refill greaterequalto than 6 months"
-    source: Sheet1
+    source: CombinedRADET
     periodColumn: DateOfCurrentARTStatus
     requiredColumns:
       - CurrentARTStatus
