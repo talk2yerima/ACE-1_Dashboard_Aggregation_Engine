@@ -54,6 +54,7 @@ export interface IndicatorDef {
   requiredColumns: string[];
   computedColumns?: ComputedColumnDef[];
   filters: FilterDef[];
+  anyOf?: FilterDef[];   // OR group: row counted if it passes at least one of these
   groupBy: string[];
   aggregation: AggregationMethod;
   disaggregation?: string;
@@ -121,6 +122,12 @@ export class AggregationEngine {
   private datimToFacility = new Map<string, { Facility: string; State: string }>();
   private datimCachePath = '';
 
+  // Maps the UUID suffix of compound values ("{facilityDATIM}_{uuid}") → facilityDATIM.
+  // ExcelJS streaming sometimes returns just the UUID when its shared-string cache
+  // misses the index; this persistent map lets us recover the DATIM in later runs.
+  private compoundSuffixMap = new Map<string, string>();
+  private suffixCachePath = '';
+
   public validationIssues: ValidationIssue[] = [];
   public stats: ProcessingStats = {
     totalRows: 0,
@@ -169,6 +176,9 @@ export class AggregationEngine {
 
     this.datimCachePath = path.join(this.options.configDir, 'datim-cache.json');
     this.loadDatimCache();
+
+    this.suffixCachePath = path.join(this.options.configDir, 'compound-suffix-cache.json');
+    this.loadSuffixCache();
 
     const ranksPath = path.join(this.options.configDir, 'categoryRanks.yaml');
     if (fs.existsSync(ranksPath)) {
@@ -244,7 +254,8 @@ export class AggregationEngine {
       const skipCols = new Set(['LGA', 'LGAOfResidence']);
 
       // Check col5 (DATIMCode) first — it is the authoritative facility identifier.
-      const col5 = tryVal(String(record['DATIMCode'] ?? '').trim());
+      const col5Raw = String(record['DATIMCode'] ?? '').trim();
+      const col5 = tryVal(col5Raw);
       if (col5) return col5;
 
       // Scan all remaining columns as fallbacks (handles ExcelJS shared-string
@@ -254,10 +265,28 @@ export class AggregationEngine {
         const found = tryVal(String(val ?? '').trim());
         if (found) return found;
       }
+
+      // Last resort for RADET: col5 might be a UUID that was previously seen as
+      // a compound suffix (e.g. "facilityDATIM_patientUUID" → patientUUID).
+      // Only try col5 to avoid false positives from shared option-concept UUIDs
+      // that may appear in other columns.
+      if (col5Raw && !col5Raw.includes('_')) {
+        const suffixMapped = this.compoundSuffixMap.get(col5Raw);
+        if (suffixMapped) return suffixMapped;
+      }
     } else {
       for (const rawVal of Object.values(record)) {
         const found = tryVal(String(rawVal ?? '').trim());
         if (found) return found;
+      }
+      // Last resort for HTS: any column value might be a UUID that was seen
+      // as a compound suffix in a previous run. All columns are checked because
+      // HTS is the cross-sheet sheet with fewer ambiguity risks.
+      for (const rawVal of Object.values(record)) {
+        const str = String(rawVal ?? '').trim();
+        if (!str) continue;
+        const suffixMapped = this.compoundSuffixMap.get(str);
+        if (suffixMapped) return suffixMapped;
       }
     }
     return null;
@@ -313,6 +342,11 @@ export class AggregationEngine {
           .filter(f => f.operator !== 'dateMode')
           .flatMap(f => [f.column, ...(f.ref ? [f.ref] : [])]),
       );
+      // Also collect anyOf columns and their ref columns
+      for (const f of (ind.anyOf ?? [])) {
+        catFilters.add(f.column);
+        if (f.ref) catFilters.add(f.ref);
+      }
       indFilterCols.set(ind.name, catFilters);
     }
 
@@ -329,10 +363,34 @@ export class AggregationEngine {
 
     this.logger.info('AggregationEngine: single streaming pass (calibration + processing)…');
 
+    // Pre-read the shared strings table from the raw ZIP before starting ExcelJS.
+    // RADET.xlsx stores all 5 worksheets BEFORE xl/sharedStrings.xml in the ZIP, so
+    // ExcelJS saves them to temp files and processes them after loading sharedStrings.
+    // ExcelJS sometimes fails to load all 1.3M entries from the 61 MB file, leaving
+    // high-index DATIM codes (index 135k–652k) unresolved on some runs. We pre-read
+    // the raw ZIP entry ourselves (100% complete) and replace ExcelJS's parser with
+    // a no-op injector — worksheets still process after styles.xml (entry #10) loads,
+    // so date-format detection continues to work correctly.
+    const preloadedStrings = await this.preReadSharedStrings(this.options.workbookPath);
     const reader = new ExcelJS.stream.xlsx.WorkbookReader(
       this.options.workbookPath,
       { sharedStrings: 'cache', styles: 'cache', hyperlinks: 'ignore', worksheets: 'emit' },
     );
+    if (preloadedStrings.length > 0) {
+      // Capture reader reference for closure (avoids 'this' binding issues in patched method)
+      const readerRef = reader as unknown as Record<string, unknown>;
+      const stringsRef = preloadedStrings;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (reader as any)._parseSharedStrings = async function*(entry: any) {
+        readerRef['sharedStrings'] = stringsRef;
+        // Drain the ZIP entry so the stream can advance to the next entry
+        await new Promise<void>(resolve => {
+          entry.on('end', () => resolve());
+          entry.on('error', () => resolve());
+          entry.resume();
+        });
+      };
+    }
     reader.read();
 
     for await (const worksheetReader of reader) {
@@ -397,6 +455,24 @@ export class AggregationEngine {
 
         // ── Extract facility DATIM (scans col1/col4/col5 for RADET, all cols for HTS) ─
         const rowDatim = this.findFacilityDatim(record, sheetName);
+
+        // ── Build compound-suffix cache (Facility + DATIMCode columns only) ────────
+        // Whenever ExcelJS correctly reads a compound "{facilityDATIM}_{uuid}" in a
+        // facility-specific column, persist "uuid → facilityDATIM".  We restrict to
+        // the Facility (col4) and DATIMCode (col5) columns only — other categorical
+        // columns (Sex, ARTStatus, LGA, etc.) use SHARED option-concept UUIDs that
+        // are identical across many facilities and would create false attributions.
+        for (const col of ['Facility', 'DATIMCode'] as const) {
+          const rawVal = record[col];
+          const str = String(rawVal ?? '').trim();
+          const datim = this.extractDatimFromCompound(str);
+          if (datim && this.orgUnitHelper.lookupByDATIM(datim)) {
+            const suffix = str.slice(12); // 11 DATIM chars + 1 underscore
+            if (suffix && !this.compoundSuffixMap.has(suffix)) {
+              this.compoundSuffixMap.set(suffix, datim);
+            }
+          }
+        }
 
         // Populate RADET cross-sheet lookup (used for HTS facility info)
         if (sheetName === 'CombinedRADET' && rowDatim && !this.datimToFacility.has(rowDatim)) {
@@ -517,9 +593,26 @@ export class AggregationEngine {
       dynamicMappings.set(col, colMap);
     }
 
+    // Log which orgUnits.yaml DATIMs were never seen in this run
+    const allKnownDatims = this.orgUnitHelper.getAllDatimCodes();
+    const neverSeen = allKnownDatims.filter(d => !orgUnitSeen.has(d));
+    if (neverSeen.length > 0) {
+      this.logger.warn(
+        `  ${neverSeen.length} facilities from orgUnits.yaml had no rows resolved in this run ` +
+        `(may have no data in this period, or ExcelJS cache miss for all their rows):`,
+      );
+      for (const d of neverSeen) {
+        const ou = this.orgUnitHelper.lookupByDATIM(d);
+        this.logger.warn(`    - ${ou?.facility ?? d} (${d})`);
+      }
+    } else {
+      this.logger.info('  All 74 facilities resolved in this run.');
+    }
+
     // Write diagnostic CSV so operators can verify / fill in missing org-unit names
     this.writeOrgUnitsRawCsv(orgUnitSeen);
     this.saveDatimCache();
+    this.saveSuffixCache();
 
     // ── Post-process: map raw keys → labels, apply categorical filters ────────
 
@@ -545,7 +638,8 @@ export class AggregationEngine {
       }
 
       // Categorical filters that apply to mapped values (exclude dateMode)
-      const catFilters = ind.filters.filter(f => f.operator !== 'dateMode');
+      const catFilters   = ind.filters.filter(f => f.operator !== 'dateMode');
+      const anyOfFilters = ind.anyOf ?? [];
 
       // Final accumulator after mapping + re-grouping
       const finalAcc  = new Map<string, StreamAcc>();
@@ -613,10 +707,11 @@ export class AggregationEngine {
         }
 
         // ── Apply categorical filters on mapped values ─────────────────────────
-        if (catFilters.length > 0) {
+        if (catFilters.length > 0 || anyOfFilters.length > 0) {
           const passedStr: Record<string, unknown> = {};
           for (const [k, v] of Object.entries(mapped)) passedStr[k] = v;
-          if (!this.filterEngine.passesAll(passedStr, catFilters)) continue;
+          if (catFilters.length > 0 && !this.filterEngine.passesAll(passedStr, catFilters)) continue;
+          if (anyOfFilters.length > 0 && !this.filterEngine.passesAny(passedStr, anyOfFilters)) continue;
         }
 
         keptGroups++;
@@ -762,6 +857,69 @@ export class AggregationEngine {
     if (severity === 'ERROR') this.stats.warnings.push(message);
   }
 
+  // ─── Shared-string pre-reader ────────────────────────────────────────────
+  // Reads xl/sharedStrings.xml directly from the XLSX ZIP using unzipper (already
+  // a transitive dependency of ExcelJS).  Returns a plain string array whose indices
+  // match the shared-string references in the worksheet XML.
+
+  private async preReadSharedStrings(xlsxPath: string): Promise<string[]> {
+    this.logger.info('AggregationEngine: pre-reading xl/sharedStrings.xml from ZIP…');
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const unzipper = require('unzipper') as {
+        Open: {
+          file(p: string): Promise<{
+            files: Array<{ path: string; buffer(): Promise<Buffer> }>;
+          }>;
+        };
+      };
+      const dir = await unzipper.Open.file(xlsxPath);
+      const ssFile = dir.files.find(f => f.path === 'xl/sharedStrings.xml');
+      if (!ssFile) {
+        this.logger.warn('AggregationEngine: xl/sharedStrings.xml not found in ZIP');
+        return [];
+      }
+
+      const xml = (await ssFile.buffer()).toString('utf8');
+      const strings: string[] = [];
+      let pos = 0;
+
+      while (pos < xml.length) {
+        const siStart = xml.indexOf('<si', pos);
+        if (siStart < 0) break;
+        const siEnd = xml.indexOf('</si>', siStart);
+        if (siEnd < 0) break;
+
+        // Extract all <t>…</t> text runs within this <si> element (handles both
+        // plain-text and rich-text formats; rich-text runs are concatenated).
+        const siContent = xml.substring(siStart, siEnd);
+        let text = '';
+        const tRe = /<t[^>]*>([^<]*)<\/t>/g;
+        let m: RegExpExecArray | null;
+        while ((m = tRe.exec(siContent)) !== null) {
+          text += m[1]
+            .replace(/&amp;/g, '&')
+            .replace(/&lt;/g, '<')
+            .replace(/&gt;/g, '>')
+            .replace(/&apos;/g, "'")
+            .replace(/&quot;/g, '"');
+        }
+        strings.push(text);
+        pos = siEnd + 5;
+      }
+
+      this.logger.info(
+        `AggregationEngine: pre-loaded ${strings.length.toLocaleString()} shared strings`,
+      );
+      return strings;
+    } catch (err) {
+      this.logger.warn(
+        `AggregationEngine: failed to pre-read shared strings (${String(err)}); falling back to ExcelJS default`,
+      );
+      return [];
+    }
+  }
+
   // ─── DATIM discovery cache ────────────────────────────────────────────────
   // ExcelJS streaming resolves shared strings inconsistently across runs:
   // compound facility UIDs (e.g. "W387n0fbylW_...") sometimes resolve to plain
@@ -807,6 +965,49 @@ export class AggregationEngine {
     if (added > 0) {
       this.logger.info(
         `AggregationEngine: saved ${added} new DATIM entries to cache (${Object.keys(existing).length} total)`,
+      );
+    }
+  }
+
+  private loadSuffixCache(): void {
+    try {
+      const raw = fs.readFileSync(this.suffixCachePath, 'utf8');
+      const cache = JSON.parse(raw) as Record<string, string>;
+      let loaded = 0;
+      for (const [suffix, datim] of Object.entries(cache)) {
+        if (!this.compoundSuffixMap.has(suffix)) {
+          this.compoundSuffixMap.set(suffix, datim);
+          loaded++;
+        }
+      }
+      if (loaded > 0) {
+        this.logger.info(
+          `AggregationEngine: loaded ${loaded} compound-suffix entries from cache (${Object.keys(cache).length} total)`,
+        );
+      }
+    } catch {
+      // Cache not yet created — first run
+    }
+  }
+
+  private saveSuffixCache(): void {
+    let existing: Record<string, string> = {};
+    try {
+      existing = JSON.parse(fs.readFileSync(this.suffixCachePath, 'utf8'));
+    } catch { /* new file */ }
+
+    let added = 0;
+    for (const [suffix, datim] of this.compoundSuffixMap.entries()) {
+      if (!existing[suffix]) {
+        existing[suffix] = datim;
+        added++;
+      }
+    }
+
+    fs.writeFileSync(this.suffixCachePath, JSON.stringify(existing, null, 2), 'utf8');
+    if (added > 0) {
+      this.logger.info(
+        `AggregationEngine: saved ${added} new compound-suffix entries (${Object.keys(existing).length} total)`,
       );
     }
   }

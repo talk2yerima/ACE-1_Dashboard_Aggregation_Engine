@@ -55,6 +55,14 @@ export class FilterEngine {
     return true;
   }
 
+  /** Returns true if the row passes AT LEAST ONE filter */
+  passesAny(row: Record<string, unknown>, filters: FilterDef[]): boolean {
+    for (const filter of filters) {
+      if (this.passes(row, filter)) return true;
+    }
+    return false;
+  }
+
   /** Returns true if the row passes a single filter */
   passes(row: Record<string, unknown>, filter: FilterDef): boolean {
     const raw = row[filter.column];
@@ -170,6 +178,9 @@ export class FilterEngine {
 
   private toNum(val: unknown): number {
     if (typeof val === 'number') return val;
-    return parseFloat(String(val));
+    const s = String(val ?? '').trim().toLowerCase();
+    // LDL ("Lower than Detection Level") and equivalent text = effectively 0 copies/mL
+    if (s === 'ldl' || s === 'undetectable' || s === 'target not detected' || s === 'tnd') return 0;
+    return parseFloat(s);
   }
 }
