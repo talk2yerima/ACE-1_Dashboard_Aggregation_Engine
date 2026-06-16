@@ -143,3 +143,64 @@ indicators:
       - AgeBand
     aggregation: COUNT
     disaggregation: Sex
+
+  - name: UNSUPRESSED_EAC_COMPLETED
+    description: "Active unsuppressed patients who completed full EAC course (>= 3 sessions)"
+    source: Sheet1
+    requiredColumns:
+      - CurrentViralLoad
+      - CurrentARTStatus
+      - NumberOfEACSessionsCompleted
+      - Sex
+      - Age
+      - DATIMCode
+    filters:
+      - column: CurrentViralLoad
+        operator: greaterThan
+        value: 1000
+      - column: CurrentARTStatus
+        operator: equals
+        value: "Active"
+      - column: NumberOfEACSessionsCompleted
+        operator: greaterThanOrEqual
+        value: 3
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: POST_EAC_VIRAL_RESULT
+    description: "Active unsuppressed patients who completed EAC (>=3 sessions) and have a repeat VL result recorded post-EAC"
+    source: Sheet1
+    requiredColumns:
+      - CurrentViralLoad
+      - CurrentARTStatus
+      - RepeatVLResultPostEAC
+      - NumberOfEACSessionsCompleted
+      - Sex
+      - Age
+      - DATIMCode
+    filters:
+      - column: CurrentViralLoad
+        operator: greaterThan
+        value: 1000
+      - column: CurrentARTStatus
+        operator: equals
+        value: "Active"
+      - column: NumberOfEACSessionsCompleted
+        operator: greaterThanOrEqual
+        value: 3
+      - column: RepeatVLResultPostEAC
+        operator: isNotNull
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
