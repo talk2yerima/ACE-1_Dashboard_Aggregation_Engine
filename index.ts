@@ -39,9 +39,13 @@ const dateModeConfig: DateModeConfig = {
   customEnd: process.env['CUSTOM_END'],
 };
 
+const inputDir = path.resolve(process.cwd(), 'input');
 const workbookPath = process.env['RADET_FILE']
   ? path.resolve(process.env['RADET_FILE'])
-  : path.resolve(process.cwd(), 'input', 'RADET.xlsx');
+  : (() => {
+      const match = fs.readdirSync(inputDir).find(f => f.startsWith('ACE-1_Combined_RADET') && f.endsWith('.xlsx'));
+      return match ? path.join(inputDir, match) : path.join(inputDir, 'RADET.xlsx');
+    })();
 
 const configDir = path.resolve(process.cwd(), 'config');
 
@@ -58,7 +62,7 @@ async function main(): Promise<void> {
 
   if (!fs.existsSync(workbookPath)) {
     logger.error(`Workbook not found: ${workbookPath}`);
-    logger.error('Place your RADET.xlsx in the input/ folder, or set RADET_FILE env var.');
+    logger.error('Place an ACE-1_Combined_RADET*.xlsx file in the input/ folder, or set RADET_FILE env var.');
     process.exit(1);
   }
 

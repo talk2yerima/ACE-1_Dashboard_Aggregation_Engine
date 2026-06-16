@@ -1641,6 +1641,179 @@ indicators:
     aggregation: COUNT
     disaggregation: Sex
 
+  # ── Unsuppressed VL + EAC cascade (shedrackfelix) ───────────────────────
+
+  - name: UNSUPPRESSED_VL
+    description: "Active patients with unsuppressed viral load (VL >= 1000 copies/ml)"
+    source: CombinedRADET
+    periodColumn: DateOfCurrentViralLoad
+    requiredColumns:
+      - CurrentViralLoad
+      - CurrentARTStatus
+      - DateOfCurrentViralLoad
+      - Sex
+      - Age
+      - Facility
+      - DATIMCode
+      - State
+    filters:
+      - column: CurrentARTStatus
+        operator: contains
+        value: "Active"
+        caseSensitive: false
+      - column: CurrentViralLoad
+        operator: isNotNull
+      - column: CurrentViralLoad
+        operator: greaterThanOrEqual
+        value: 1000
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: UNSUPPRESSED_STARTED_EAC
+    description: "Unsuppressed active patients (VL >= 1000) who commenced EAC"
+    source: CombinedRADET
+    periodColumn: DateOfCommencementOfEAC
+    requiredColumns:
+      - CurrentViralLoad
+      - CurrentARTStatus
+      - DateOfCommencementOfEAC
+      - Sex
+      - Age
+      - Facility
+      - DATIMCode
+      - State
+    filters:
+      - column: CurrentARTStatus
+        operator: contains
+        value: "Active"
+        caseSensitive: false
+      - column: CurrentViralLoad
+        operator: isNotNull
+      - column: CurrentViralLoad
+        operator: greaterThanOrEqual
+        value: 1000
+      - column: DateOfCommencementOfEAC
+        operator: isNotNull
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: UNSUPPRESSED_STARTED_EAC1
+    description: "Unsuppressed active patients who completed at least 1 EAC session"
+    source: CombinedRADET
+    periodColumn: DateOfCommencementOfEAC
+    requiredColumns:
+      - CurrentViralLoad
+      - CurrentARTStatus
+      - NumberOfEACSessionsCompleted
+      - Sex
+      - Age
+      - Facility
+      - DATIMCode
+      - State
+    filters:
+      - column: CurrentARTStatus
+        operator: contains
+        value: "Active"
+        caseSensitive: false
+      - column: CurrentViralLoad
+        operator: isNotNull
+      - column: CurrentViralLoad
+        operator: greaterThanOrEqual
+        value: 1000
+      - column: NumberOfEACSessionsCompleted
+        operator: greaterThanOrEqual
+        value: 1
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: UNSUPPRESSED_STARTED_EAC2
+    description: "Unsuppressed active patients who completed at least 2 EAC sessions"
+    source: CombinedRADET
+    periodColumn: DateOfCommencementOfEAC
+    requiredColumns:
+      - CurrentViralLoad
+      - CurrentARTStatus
+      - NumberOfEACSessionsCompleted
+      - Sex
+      - Age
+      - Facility
+      - DATIMCode
+      - State
+    filters:
+      - column: CurrentARTStatus
+        operator: contains
+        value: "Active"
+        caseSensitive: false
+      - column: CurrentViralLoad
+        operator: isNotNull
+      - column: CurrentViralLoad
+        operator: greaterThanOrEqual
+        value: 1000
+      - column: NumberOfEACSessionsCompleted
+        operator: greaterThanOrEqual
+        value: 2
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: UNSUPPRESSED_STARTED_EAC3
+    description: "Unsuppressed active patients who completed at least 3 EAC sessions"
+    source: CombinedRADET
+    periodColumn: DateOfCommencementOfEAC
+    requiredColumns:
+      - CurrentViralLoad
+      - CurrentARTStatus
+      - NumberOfEACSessionsCompleted
+      - Sex
+      - Age
+      - Facility
+      - DATIMCode
+      - State
+    filters:
+      - column: CurrentARTStatus
+        operator: contains
+        value: "Active"
+        caseSensitive: false
+      - column: CurrentViralLoad
+        operator: isNotNull
+      - column: CurrentViralLoad
+        operator: greaterThanOrEqual
+        value: 1000
+      - column: NumberOfEACSessionsCompleted
+        operator: greaterThanOrEqual
+        value: 3
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
 # Formula-based indicators (calculated from other indicators)
 formulaIndicators:
 

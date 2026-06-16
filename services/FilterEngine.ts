@@ -181,6 +181,7 @@ export class FilterEngine {
     const s = String(val ?? '').trim().toLowerCase();
     // LDL ("Lower than Detection Level") and equivalent text = effectively 0 copies/mL
     if (s === 'ldl' || s === 'undetectable' || s === 'target not detected' || s === 'tnd') return 0;
-    return parseFloat(s);
+    // Strip thousand separators (e.g. "1,936" → 1936) before parsing
+    return parseFloat(s.replace(/,/g, ''));
   }
 }
