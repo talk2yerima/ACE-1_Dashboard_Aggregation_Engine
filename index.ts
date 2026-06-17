@@ -94,19 +94,21 @@ async function main(): Promise<void> {
 
   // ── Azure Blob Upload ──────────────────────────────────────────────────
   const connectionString = process.env['AZURE_STORAGE_CONNECTION_STRING'];
+  const containerName    = process.env['AZURE_STORAGE_CONTAINER'] ?? 'powerbi-datasource';
+  const blobPrefix       = process.env['AZURE_STORAGE_BLOB_PREFIX'] ?? '';
+
   if (csvPath && connectionString) {
     try {
-      logger.info('\nUploading CSV to Azure Blob Storage (powerbi-datasource)...');
+      logger.info(`\nUploading CSV to Azure Blob Storage (${containerName})...`);
       const blobServiceClient = BlobServiceClient.fromConnectionString(connectionString);
-      const containerClient = blobServiceClient.getContainerClient('powerbi-datasource');
-      const blobName = path.basename(csvPath);
-      const blockBlobClient = containerClient.getBlockBlobClient(blobName);
-      const fileStream = fs.createReadStream(csvPath);
-      const fileSize = fs.statSync(csvPath).size;
-      await blockBlobClient.uploadStream(fileStream, undefined, undefined, {
+      const containerClient   = blobServiceClient.getContainerClient(containerName);
+      const blobName          = blobPrefix + path.basename(csvPath);
+      const blockBlobClient   = containerClient.getBlockBlobClient(blobName);
+      const fileSize          = fs.statSync(csvPath).size;
+      await blockBlobClient.uploadStream(fs.createReadStream(csvPath), undefined, undefined, {
         blobHTTPHeaders: { blobContentType: 'text/csv' },
       });
-      logger.info(`  Uploaded: ${blobName} (${(fileSize / 1024).toFixed(1)} KB) → powerbi-datasource`);
+      logger.info(`  Uploaded: ${blobName} (${(fileSize / 1024).toFixed(1)} KB) → ${containerName}`);
     } catch (err) {
       logger.error(`  Blob upload failed: ${String(err)}`);
     }
