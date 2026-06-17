@@ -221,7 +221,6 @@ indicators:
   - name: TX_CURR
     description: "Number of adults and children currently receiving antiretroviral therapy (ART)"
     source: CombinedRADET
-    periodColumn: LastPickupDate
     requiredColumns:
       - CurrentARTStatus
       - LastPickupDate
