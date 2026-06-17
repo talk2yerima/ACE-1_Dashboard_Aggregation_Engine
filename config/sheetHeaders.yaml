@@ -98,6 +98,12 @@ Sheet1:
   - NumberOfFingersRecaptured                                      # 90
   - CaseManager                                                    # 91
 
+# Maps logical sheet names (used in indicators.yaml) to actual sheet names in the workbook.
+# Allows indicators to use stable names even when the source file uses Sheet1/Sheet2 etc.
+sheetAliases:
+  CombinedRADET: Sheet1
+  CombinedHTS: Sheet2
+
 CombinedHTS:
   - DATIMCode        # 1
   - PatientId        # 2

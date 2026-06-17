@@ -115,6 +115,8 @@ export class AggregationEngine {
   private indicatorsConfig!: IndicatorsConfig;
   private sheetHeaders!: Record<string, string[]>;
   private skipFirstRowSheets: Set<string> = new Set();
+  /** Maps logical source name (used in indicators.yaml) → physical sheet name in the workbook */
+  private sheetAliases: Record<string, string> = {};
   private categoryRanksConfig!: { categoryRanks: Record<string, string[]> };
 
   // Built from Sheet1 during streaming; used to enrich HTS rows.
@@ -157,12 +159,19 @@ export class AggregationEngine {
     );
 
     const headersYaml = fs.readFileSync(path.join(this.options.configDir, 'sheetHeaders.yaml'), 'utf8');
-    const headersRaw = yaml.load(headersYaml) as Record<string, string[] | { columns: string[]; skipFirstRow?: boolean }>;
+    const headersRaw = yaml.load(headersYaml) as Record<string, unknown>;
+    // Extract sheetAliases first, then process the rest as sheet headers
+    this.sheetAliases = {};
+    if (headersRaw['sheetAliases'] && typeof headersRaw['sheetAliases'] === 'object') {
+      this.sheetAliases = headersRaw['sheetAliases'] as Record<string, string>;
+      this.logger.info(`AggregationEngine: sheet aliases: ${JSON.stringify(this.sheetAliases)}`);
+    }
     // Normalise: support both plain array and {columns, skipFirstRow} object forms
     this.sheetHeaders = {};
     for (const [sheet, val] of Object.entries(headersRaw)) {
+      if (sheet === 'sheetAliases') continue;
       if (Array.isArray(val)) {
-        this.sheetHeaders[sheet] = val;
+        this.sheetHeaders[sheet] = val as string[];
       } else if (val && typeof val === 'object' && 'columns' in val) {
         this.sheetHeaders[sheet] = (val as { columns: string[] }).columns;
         if ((val as { skipFirstRow?: boolean }).skipFirstRow) {
@@ -311,11 +320,15 @@ export class AggregationEngine {
     const freq = new Map<string, Map<string, number>>();
     for (const col of targetCols) freq.set(col, new Map());
 
-    // Group indicators by source sheet
+    // Group indicators by source sheet (resolve aliases: logical → physical)
     const bySheet = new Map<string, IndicatorDef[]>();
+    // Track logical→physical mapping for warning messages
+    const physicalToLogical = new Map<string, string>();
     for (const ind of this.indicatorsConfig.indicators) {
-      if (!bySheet.has(ind.source)) bySheet.set(ind.source, []);
-      bySheet.get(ind.source)!.push(ind);
+      const physical = this.sheetAliases[ind.source] ?? ind.source;
+      if (!bySheet.has(physical)) bySheet.set(physical, []);
+      bySheet.get(physical)!.push(ind);
+      physicalToLogical.set(physical, ind.source);
     }
 
     // Determine all fields needed per indicator (groupBy + categorical filter cols)

@@ -4,10 +4,16 @@
  * Run with: npx ts-node scripts/generate-sample.ts
  */
 import ExcelJS from 'exceljs';
+import fs from 'fs';
 import path from 'path';
+import yaml from 'js-yaml';
 import dayjs from 'dayjs';
 
 const TODAY = dayjs().format('YYYY-MM-DD');
+const sheetHeadersPath = path.resolve(__dirname, '../config/sheetHeaders.yaml');
+const sheetHeaders = yaml.load(fs.readFileSync(sheetHeadersPath, 'utf8')) as Record<string, string[]>;
+const COMBINED_RADET_HEADERS = sheetHeaders['CombinedRADET'] ?? [];
+const COMBINE_HTS_HEADERS = sheetHeaders['CombineHTS'] ?? [];
 
 const FACILITIES = [
   { name: 'General Hospital Wukari', datim: 'JPBcTpp6XUu', lga: 'Wukari', state: 'Taraba' },
@@ -23,8 +29,25 @@ const TB_STATUSES = [
   'Presumptive TB', 'Presumptive', 'TB/HIV co-infected', 'TB suspect',
   'Not a TB Case', 'TB Treatment Completed',
 ];
-const ART_STATUSES = ['Active', 'Inactive', 'LTFU', 'Dead'];
+const ART_STATUSES = [
+  'Active',
+  'Lost to Follow-Up',
+  'Transferred Out',
+  'Stopped Treatment',
+  'Dead',
+  'Inactive',
+];
 const ART_SETTINGS = ['51', '52', 'Facility', 'COMMUNITY'];
+
+function randomARTStatus(): string {
+  const r = Math.random();
+  if (r < 0.50) return 'Active';
+  if (r < 0.754) return 'Lost to Follow-Up';
+  if (r < 0.856) return 'Transferred Out';
+  if (r < 0.932) return 'Stopped Treatment';
+  if (r < 0.962) return 'Dead';
+  return 'Inactive';
+}
 
 function randomFrom<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
@@ -92,12 +115,44 @@ function generateRADETRows(count: number): Record<string, unknown>[] {
     row.LastCD4Count = '';
     row.DateOfVLSampleCollection = '';
     row.DateOfCurrentVLResultSample = '';
-    row.CurrentViralLoad = '';
-    row.DateOfCurrentViralLoad = '';
+    // Generate viral load data: ~40% have VL results spread across fiscal year
+    // Mix of formats: plain numbers, <50 format, and NotDetected
+    if (Math.random() > 0.6) {
+      // VL dates spread across 365 days (entire year)
+      const vlDaysBack = Math.floor(Math.random() * 365);
+      row.DateOfCurrentViralLoad = dayjs().subtract(vlDaysBack, 'days').format('YYYY-MM-DD');
+      const vlRandom = Math.random();
+      if (vlRandom < 0.15) {
+        // 15% NotDetected (undetectable)
+        row.CurrentViralLoad = 'NotDetected';
+      } else if (vlRandom < 0.30) {
+        // 15% <50 (very low, undetectable range)
+        row.CurrentViralLoad = '<50';
+      } else if (vlRandom < 0.55) {
+        // 25% suppressed numbers (50-1000)
+        row.CurrentViralLoad = String(Math.floor(Math.random() * 950) + 50);
+      } else {
+        // 45% unsuppressed (>1000)
+        row.CurrentViralLoad = String(Math.floor(Math.random() * 500000) + 1001);
+      }
+    } else {
+      row.CurrentViralLoad = '';
+      row.DateOfCurrentViralLoad = '';
+    }
+    row.DateOfCommencementOfEAC = '';
     row.ViralLoadIndication = '';
     row.ViralLoadEligibilityStatus = '';
     row.DateOfVLEligibilityStatus = '';
-    row.CurrentARTStatus = randomFrom(ART_STATUSES);
+    row.CurrentARTStatus = randomARTStatus();
+    if (row.CurrentARTStatus === 'Active') {
+      const currentVlNum = parseFloat(String(row.CurrentViralLoad));
+      if (!Number.isNaN(currentVlNum) && currentVlNum > 1000 && row.DateOfCurrentViralLoad) {
+        const startDate = dayjs(String(row.DateOfCurrentViralLoad)).add(7, 'day');
+        row.DateOfCommencementOfEAC = startDate.isAfter(dayjs())
+          ? String(row.DateOfCurrentViralLoad)
+          : startDate.format('YYYY-MM-DD');
+      }
+    }
     row.DateOfCurrentARTStatus = '';
     row.ClientVerificationOutcome = '';
     row.CauseOfDeath = '';
@@ -145,10 +200,8 @@ async function main(): Promise<void> {
   const radetWs = wb.addWorksheet('CombinedRADET');
   const radetRows = generateRADETRows(500);
   if (radetRows.length > 0) {
-    const headers = Object.keys(radetRows[0]);
-    radetWs.addRow(headers);
     for (const row of radetRows) {
-      radetWs.addRow(headers.map((h) => row[h]));
+      radetWs.addRow(COMBINED_RADET_HEADERS.map((h) => row[h] ?? ''));
     }
   }
 
@@ -156,10 +209,8 @@ async function main(): Promise<void> {
   const htsWs = wb.addWorksheet('CombineHTS');
   const htsRows = generateHTSRows(300);
   if (htsRows.length > 0) {
-    const headers = Object.keys(htsRows[0]);
-    htsWs.addRow(headers);
     for (const row of htsRows) {
-      htsWs.addRow(headers.map((h) => row[h]));
+      htsWs.addRow(COMBINE_HTS_HEADERS.map((h) => row[h] ?? ''));
     }
   }
 
