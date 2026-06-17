@@ -1,6 +1,7 @@
 import path from 'path';
 import fs from 'fs';
 import winston from 'winston';
+import { BlobServiceClient } from '@azure/storage-blob';
 
 import { AggregationEngine } from './services/AggregationEngine';
 import { OutputWriter } from './services/OutputWriter';
@@ -79,14 +80,38 @@ async function main(): Promise<void> {
 
   // ── Output ─────────────────────────────────────────────────────────────
   const writer = new OutputWriter({ outputDir, logger });
+  let csvPath: string | null = null;
 
   if (dashboardRows.length > 0) {
     const { xlsx, csv } = await writer.writeDashboard(dashboardRows);
+    csvPath = csv;
     logger.info(`\nOutput files:`);
     logger.info(`  ${xlsx}`);
     logger.info(`  ${csv}`);
   } else {
     logger.warn('No dashboard rows generated — check your workbook and date mode.');
+  }
+
+  // ── Azure Blob Upload ──────────────────────────────────────────────────
+  const connectionString = process.env['AZURE_STORAGE_CONNECTION_STRING'];
+  if (csvPath && connectionString) {
+    try {
+      logger.info('\nUploading CSV to Azure Blob Storage (powerbi-datasource)...');
+      const blobServiceClient = BlobServiceClient.fromConnectionString(connectionString);
+      const containerClient = blobServiceClient.getContainerClient('powerbi-datasource');
+      const blobName = path.basename(csvPath);
+      const blockBlobClient = containerClient.getBlockBlobClient(blobName);
+      const fileStream = fs.createReadStream(csvPath);
+      const fileSize = fs.statSync(csvPath).size;
+      await blockBlobClient.uploadStream(fileStream, undefined, undefined, {
+        blobHTTPHeaders: { blobContentType: 'text/csv' },
+      });
+      logger.info(`  Uploaded: ${blobName} (${(fileSize / 1024).toFixed(1)} KB) → powerbi-datasource`);
+    } catch (err) {
+      logger.error(`  Blob upload failed: ${String(err)}`);
+    }
+  } else if (csvPath && !connectionString) {
+    logger.warn('  AZURE_STORAGE_CONNECTION_STRING not set — skipping blob upload.');
   }
 
   // ── Validation Report ──────────────────────────────────────────────────
