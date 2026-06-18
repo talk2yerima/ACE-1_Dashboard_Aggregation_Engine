@@ -39,6 +39,17 @@ export interface ValidationIssue {
   message: string;
 }
 
+export interface CrossSheetLookup {
+  /** Sheet whose column values to collect into a lookup set. */
+  fromSheet: string;
+  /** Column in fromSheet to collect (e.g. PatientId). */
+  fromColumn: string;
+  /** Column in this indicator's source sheet to check against the set. */
+  matchColumn: string;
+  /** Optional filters on fromSheet rows — only matching rows contribute to the lookup set. */
+  lookupFilters?: FilterDef[];
+}
+
 export interface IndicatorDef {
   name: string;
   description?: string;
@@ -46,6 +57,7 @@ export interface IndicatorDef {
   requiredColumns: string[];
   filters: FilterDef[];
   anyOf?: FilterDef[];   // OR group: row counted if it passes at least one of these
+  crossSheetLookup?: CrossSheetLookup;  // only count rows whose matchColumn exists in fromSheet
   groupBy: string[];
   aggregation: AggregationMethod;
   disaggregation?: string;
@@ -314,6 +326,13 @@ export class AggregationEngine {
       indFilterCols.set(ind.name, catFilters);
     }
 
+    // Cross-sheet lookup sets: key = indicator name → Set of collected values
+    // Each indicator gets its own set so lookupFilters can differ per indicator.
+    const crossSheetSets = new Map<string, Set<string>>();
+    for (const ind of this.indicatorsConfig.indicators) {
+      if (ind.crossSheetLookup) crossSheetSets.set(ind.name, new Set());
+    }
+
     // rawAccMap: indName → rawKeyStr → RawGroupEntry
     const rawAccMap = new Map<string, Map<string, RawGroupEntry>>();
     for (const ind of this.indicatorsConfig.indicators) rawAccMap.set(ind.name, new Map());
@@ -376,6 +395,25 @@ export class AggregationEngine {
 
         this.stats.totalRows++;
 
+        // ── Populate cross-sheet lookup sets ─────────────────────────────────
+        for (const [indName, set] of crossSheetSets) {
+          const lookup = this.indicatorsConfig.indicators.find(i => i.name === indName)!.crossSheetLookup!;
+          if (lookup.fromSheet !== sheetName) continue;
+
+          if (lookup.lookupFilters && lookup.lookupFilters.length > 0) {
+            // Normalize compound UIDs before filter evaluation so plain
+            // value comparisons (e.g. "Active") work on DHIS2-coded fields.
+            const normRecord: Record<string, unknown> = {};
+            for (const [k, v] of Object.entries(record)) {
+              normRecord[k] = this.normalizeOptionValue(String(v ?? '').trim());
+            }
+            if (!this.filterEngine.passesAll(normRecord, lookup.lookupFilters)) continue;
+          }
+
+          const val = String(record[lookup.fromColumn] ?? '').trim();
+          if (val) set.add(val);
+        }
+
         // ── Build frequency maps (suffix-normalised) ─────────────────────────
         for (const col of targetCols) {
           if (!(col in record)) continue;
@@ -419,6 +457,13 @@ export class AggregationEngine {
             // Standard (non-group-by-date) mode: apply dateMode filter directly
             const dmFilter = ind.filters.find(f => f.operator === 'dateMode');
             if (dmFilter && !this.dateHelper.isInRange(record[dmFilter.column])) continue;
+          }
+
+          // ── Cross-sheet lookup gate ───────────────────────────────────────────
+          if (ind.crossSheetLookup) {
+            const set      = crossSheetSets.get(ind.name);
+            const matchVal = String(record[ind.crossSheetLookup.matchColumn] ?? '').trim();
+            if (!set || !matchVal || !set.has(matchVal)) continue;
           }
 
           // ── Row period label ──────────────────────────────────────────────────

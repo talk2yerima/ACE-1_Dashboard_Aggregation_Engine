@@ -1540,6 +1540,221 @@ indicators:
     aggregation: COUNT
     disaggregation: Sex
 
+  - name: Eligible_for_Index
+    description: "Eligible for Index Testing — clients newly on treatment, unsuppressed VL, or Active Restart (any condition met)"
+    source: Sheet1
+    periodColumn: DateOfCurrentARTStatus
+    requiredColumns:
+      - CurrentARTStatus
+      - DateOfCurrentARTStatus
+      - ARTStartDate
+      - CurrentViralLoad
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - Age
+    filters:
+      - column: CurrentARTStatus
+        operator: inList
+        value:
+          - "Active"
+          - "Active Restart"
+        caseSensitive: false
+    anyOf:
+      - column: ARTStartDate
+        operator: dateinRange
+        value: CurrentFY
+      - column: CurrentViralLoad
+        operator: greaterThanOrEqual
+        value: 1000
+      - column: CurrentARTStatus
+        operator: equals
+        value: "Active Restart"
+        caseSensitive: false
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: offered_index_testing
+    description: "Offered Index Testing — clients eligible for index testing who were offered index testing"
+    source: Sheet3
+    periodColumn: Dateofferedindextesting
+    requiredColumns:
+      - Dateofferedindextesting
+      - Sex
+      - Age
+      - DATIMCode
+    filters:
+      - column: Dateofferedindextesting
+        operator: dateMode
+        value: DAILY
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: Accepted_Index_Testing
+    description: "Accepted Index Testing — clients eligible for index testing who accepted index testing"
+    source: Sheet3
+    periodColumn: Dateofferedindextesting
+    requiredColumns:
+      - Dateofferedindextesting
+      - AcceptedIndexTesting
+      - Sex
+      - Age
+      - DATIMCode
+    filters:
+      - column: Dateofferedindextesting
+        operator: dateMode
+        value: DAILY
+      - column: AcceptedIndexTesting
+        operator: equals    
+        value: "Yes"
+        caseSensitive: false
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: Contact_Elicitation
+    description: "Contact Elicitation — clients eligible for index testing who were offered index testing and accepted index testing"
+    source: Sheet3
+    periodColumn: DateofElicitation
+    requiredColumns:
+      - DateofElicitation
+      - Sex
+      - Age
+      - DATIMCode
+    filters:
+      - column: DateofElicitation
+        operator: dateMode
+        value: DAILY
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: HTS_Index_Testing
+    description: "HTS Index Testing — contacts elicited who received HTS index testing"
+    source: Sheet2
+    periodColumn: DateOfHIVTesting
+    requiredColumns:
+      - TestingSetting
+      - DateOfHIVTesting
+      - Sex
+      - Age
+      - DATIMCode
+    filters:
+      - column: TestingSetting
+        operator: equals
+        value: "Index"
+        caseSensitive: false
+      - column: DateOfHIVTesting
+        operator: dateMode
+        value: DAILY
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: HTS_Index_Testing_positive
+    description: "HTS Index Testing Positive — contacts elicited who received HTS index testing and tested positive"
+    source: Sheet2
+    periodColumn: DateOfHIVTesting
+    requiredColumns:
+      - TestingSetting
+      - FinalHIVTestResult
+      - DateOfHIVTesting
+      - Sex
+      - Age
+      - DATIMCode
+    filters:
+      - column: TestingSetting
+        operator: equals
+        value: "Index"
+        caseSensitive: false
+      - column: FinalHIVTestResult
+        operator: equals  
+        value: "Positive"
+        caseSensitive: false
+      - column: DateOfHIVTesting
+        operator: dateMode
+        value: DAILY
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: Index_ART_Initiated
+    description: "Index ART Initiated — contacts who tested HIV positive via index testing and whose PatientId exists in Sheet1 (i.e. were initiated on ART)"
+    source: Sheet2
+    periodColumn: DateOfHIVTesting
+    crossSheetLookup:
+      fromSheet: Sheet1
+      fromColumn: PatientId
+      matchColumn: PatientId
+      lookupFilters:
+        - column: CurrentARTStatus
+          operator: inList
+          value:
+            - "Active"
+            - "Active Restart"
+          caseSensitive: false
+    requiredColumns:
+      - TestingSetting
+      - FinalHIVTestResult
+      - DateOfHIVTesting
+      - PatientId
+      - Sex
+      - Age
+      - DATIMCode
+    filters:
+      - column: TestingSetting
+        operator: equals
+        value: "Index"
+        caseSensitive: false
+      - column: FinalHIVTestResult
+        operator: equals
+        value: "Positive"
+        caseSensitive: false
+      - column: DateOfHIVTesting
+        operator: dateMode
+        value: DAILY
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
 # Formula-based indicators (calculated from other indicators)
 formulaIndicators:
 
