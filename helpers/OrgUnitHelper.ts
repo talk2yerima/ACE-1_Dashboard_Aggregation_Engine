@@ -55,6 +55,11 @@ export class OrgUnitHelper {
   mapLGA(raw: string):      string { return this.lgas.get(raw)       ?? raw; }
   mapFacility(raw: string): string { return this.facilities.get(raw) ?? raw; }
 
+  /** Returns all known DATIM facility codes from orgUnits.yaml. */
+  getAllDatimCodes(): string[] {
+    return [...this.datimCodes.keys()];
+  }
+
   get hasAnyMappings(): boolean {
     return (
       this.datimCodes.size > 0 ||

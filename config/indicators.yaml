@@ -29,6 +29,29 @@ indicators:
     aggregation: COUNT
     disaggregation: Sex
 
+  - name: HTS_TST
+    description: "Number of individuals who are tested for HIV"
+    source: CombinedHTS
+    periodColumn: DateOfHIVTesting
+    requiredColumns:
+      - FinalHIVTestResult
+      - DateOfHIVTesting
+      - Sex
+      - Age
+      - DATIMCode
+    filters:
+      - column: DateOfHIVTesting
+        operator: dateMode
+        value: DAILY
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
   - name: Newly_Enrolled
     description: "Newly enrolled patients on ART"
     source: CombinedRADET
@@ -289,6 +312,66 @@ indicators:
       - column: TBTreatmentStartDate
         operator: dateMode
         value: TODAY
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: TB_ACTIVE_INIT_TREAT_NEW_CARE
+    description: "Number of PLHIV on ART with active TB disease who initiated TB treatment (New Care)"
+    source: CombinedRADET
+    periodColumn: TBTreatmentStartDate
+    requiredColumns:
+      - TBTreatmentStartDate
+      - EnrollmentDate
+      - TBType
+      - CurrentARTStatus
+      - Sex
+      - Age
+      - DATIMCode
+    filters:
+      - column: CurrentARTStatus
+        operator: equals
+        value: "Active"
+      - column: TBTreatmentStartDate
+        operator: isNotNull
+      - column: EnrollmentDate
+        operator: equalsColumn
+        valueColumn: TBTreatmentStartDate
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: TB_ACTIVE_INIT_TREAT_CLINIC_ENCOUNTER
+    description: "Number of PLHIV on ART with active TB disease who initiated TB treatment (Clinic Encounter)"
+    source: CombinedRADET
+    periodColumn: TBTreatmentStartDate
+    requiredColumns:
+      - TBTreatmentStartDate
+      - ARTStartDate
+      - TBType
+      - CurrentARTStatus
+      - Sex
+      - Age
+      - DATIMCode
+    filters:
+      - column: CurrentARTStatus
+        operator: equals
+        value: "Active"
+      - column: TBTreatmentStartDate
+        operator: isNotNull
+      - column: ARTStartDate
+        operator: notEqualsColumn
+        valueColumn: TBTreatmentStartDate
     groupBy:
       - Facility
       - DATIMCode
@@ -1463,8 +1546,8 @@ indicators:
         operator: greaterThanOrEqual
         value: 1000
       - column: CurrentARTStatus
-        operator: inlist
-        value: 
+        operator: inList
+        value:
           - "Active"
           - "Active Restart"
         caseSensitive: false
@@ -1853,7 +1936,7 @@ indicators:
     aggregation: COUNT
     disaggregation: Sex
 
-  # ── TX_CURR Multi-Month Dispensing (uakume) ───────────────────────────────
+  # ── TX_CURR Multi-Month Dispensing (Hauwa Mukhtar) ───────────────────────────────
 
   - name: TX_CURR_MMD1
     description: "Active patients on 1-month ARV refill"
@@ -2065,12 +2148,38 @@ indicators:
     aggregation: COUNT
     disaggregation: Sex
 
+  - name: TX_CURR
+    description: "TX_CURR — clients currently on treatment"
+    source: CombinedRADET
+    requiredColumns:
+      - CurrentARTStatus
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - Age
+    filters:
+      - column: CurrentARTStatus
+        operator: inList
+        value:
+          - "Active"
+          - "Active Restart"
+        caseSensitive: false
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
 # Formula-based indicators (calculated from other indicators)
 formulaIndicators:
 
   - name: LINKAGE_RATE
     description: "Proportion of HTS positive who were linked to ART"
-    numerator: TX_NEW
+    numerator: TX_New
     denominator: HTS_TST_POS
     formula: "numerator / denominator"
     outputType: percentage
@@ -2081,8 +2190,8 @@ formulaIndicators:
 
   - name: TX_New_TPT_Gap
     description: "New ART TB-negative patients who have not yet started TPT"
-    numerator: TX_New_Started_TP
-    denominator: TTX_NEW
+    numerator: TX_New_TB_Negative
+    denominator: TX_New_Started_TPT
     formula: "numerator - denominator"
     outputType: count
     groupBy:
@@ -2092,8 +2201,8 @@ formulaIndicators:
 
   - name: TB_TX_GAP
     description: "Gap between TB positive results returned and treatment started"
-    numerator: TB_RESULTS_RETURNED
-    denominator: TB_TX_STARTED
+    numerator: TB_Results_Returned
+    denominator: TB_TX_Started
     formula: "numerator - denominator"
     outputType: count
     groupBy:
@@ -2103,8 +2212,8 @@ formulaIndicators:
 
   - name: Suppression_Rate
     description: "Proportion of patients with VL results who are virally suppressed (< 1000 copies/mL)"
-    numerator: VL_Suppressed
-    denominator: VL_Result_Received
+    numerator: PVLSN
+    denominator: VL Result Received_PVLSD
     formula: "numerator / denominator"
     outputType: percentage
     groupBy:
@@ -2114,7 +2223,7 @@ formulaIndicators:
 
   - name: VL_Coverage
     description: "Proportion of eligible patients who received a viral load sample collection"
-    numerator: VLSC
+    numerator: VL_Sample_Collected
     denominator: Eligible_For_VLSC
     formula: "numerator / denominator"
     outputType: percentage
@@ -2122,3 +2231,73 @@ formulaIndicators:
       - Facility
       - DATIMCode
       - State
+  - name: TPT_initiated_clients_already_on_treatment
+    description: "TPT initiated — clients already on treatment"
+    source: Sheet1
+    periodColumn: DateOfTPTStart
+    requiredColumns:
+      - CurrentARTStatus
+      - DateOfTPTStart
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - Age
+    filters:
+      - column: CurrentARTStatus
+        operator: inList
+        value:
+          - "Active"
+          - "Active Restart"
+        caseSensitive: false
+      - column: DateOfTPTStart
+        operator: dateinRange
+        value: CurrentFY
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: TPT_initiated_clients_newly_on_treatment
+    description: "TPT initiated — clients newly on treatment"
+    source: Sheet1
+    periodColumn: DateOfTPTStart
+    requiredColumns:
+      - CurrentARTStatus
+      - ARTStartDate
+      - CareEntryPoint
+      - DateOfTPTStart
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - Age
+    filters:
+      - column: CurrentARTStatus
+        operator: inList
+        value:
+          - "Active"
+          - "Active Restart"
+        caseSensitive: false
+      - column: CareEntryPoint
+        operator: notContains
+        value: "transfer"
+        caseSensitive: false
+      - column: ARTStartDate
+        operator: dateinRange
+        value: CurrentFY
+      - column: DateOfTPTStart
+        operator: dateinRange
+        value: CurrentFY
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex

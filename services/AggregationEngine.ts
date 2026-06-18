@@ -364,17 +364,27 @@ export class AggregationEngine {
     this.logger.info('AggregationEngine: single streaming pass (calibration + processing)…');
 
     // Pre-read the shared strings table from the raw ZIP before starting ExcelJS.
-    // RADET.xlsx stores all 5 worksheets BEFORE xl/sharedStrings.xml in the ZIP, so
-    // ExcelJS saves them to temp files and processes them after loading sharedStrings.
-    // ExcelJS sometimes fails to load all 1.3M entries from the 61 MB file, leaving
-    // high-index DATIM codes (index 135k–652k) unresolved on some runs. We pre-read
-    // the raw ZIP entry ourselves (100% complete) and replace ExcelJS's parser with
-    // a no-op injector — worksheets still process after styles.xml (entry #10) loads,
-    // so date-format detection continues to work correctly.
-    const preloadedStrings = await this.preReadSharedStrings(this.options.workbookPath);
+    // ACE-1_Combined_RADET files store all 5 worksheets BEFORE xl/sharedStrings.xml
+    // in the ZIP, so ExcelJS sometimes only partially loads the 1.3M-entry table,
+    // leaving high-index DATIM codes unresolved. We pre-read the full table and
+    // inject it directly, bypassing ExcelJS's incremental parser.
+    // Files without sharedStrings (e.g. plain RADET.xlsx with inline strings) are
+    // handled gracefully — preloadedStrings is empty and the patch is skipped.
+    // styles: 'ignore' prevents a crash on real RADET files where ExcelJS cannot
+    // resolve styles before processing worksheets. Date values in RADET are stored
+    // as text strings (dd/MM/yyyy) so style-based date detection is not required.
+    //
+    // xl/_rels/workbook.xml.rels is also stored AFTER the worksheet files in the ZIP,
+    // so ExcelJS cannot map internal filenames (sheet1, sheet2…) to visible tab names
+    // (CombinedRADET, CombinedHTS…) when it emits worksheet events. We pre-read both
+    // workbook.xml and workbook.xml.rels to build our own filename→tabName map.
+    const [preloadedStrings, sheetNameMap] = await Promise.all([
+      this.preReadSharedStrings(this.options.workbookPath),
+      this.preReadSheetNames(this.options.workbookPath),
+    ]);
     const reader = new ExcelJS.stream.xlsx.WorkbookReader(
       this.options.workbookPath,
-      { sharedStrings: 'cache', styles: 'cache', hyperlinks: 'ignore', worksheets: 'emit' },
+      { sharedStrings: 'cache', styles: 'ignore', hyperlinks: 'ignore', worksheets: 'emit' },
     );
     if (preloadedStrings.length > 0) {
       // Capture reader reference for closure (avoids 'this' binding issues in patched method)
@@ -395,7 +405,14 @@ export class AggregationEngine {
 
     for await (const worksheetReader of reader) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const sheetName: string = (worksheetReader as any).name;
+      const rawSheetName: string = (worksheetReader as any).name;
+      // Translate ExcelJS's internal filename (e.g. "sheet1") to the actual tab name
+      // (e.g. "CombinedRADET"). Falls back to rawSheetName when the map is empty or
+      // ExcelJS already resolved the name correctly.
+      // ExcelJS generates "Sheet1", "Sheet2"… when it can't resolve tab names from
+      // workbook.xml.rels. Our preReadSheetNames map uses lowercase keys ("sheet1"…)
+      // matching the ZIP filenames. Normalise to lowercase for the lookup.
+      const sheetName: string = sheetNameMap.get(rawSheetName.toLowerCase()) ?? rawSheetName;
       seenSheets.add(sheetName);
 
       const indicators = bySheet.get(sheetName);
@@ -855,6 +872,73 @@ export class AggregationEngine {
   ): void {
     this.validationIssues.push({ sheet, row, column, severity, message });
     if (severity === 'ERROR') this.stats.warnings.push(message);
+  }
+
+  // ─── Sheet-name pre-reader ────────────────────────────────────────────────
+  // xl/_rels/workbook.xml.rels is stored AFTER the worksheet files in the ZIP.
+  // ExcelJS streaming therefore cannot map internal filenames (sheet1…sheet5) to
+  // visible tab names (CombinedRADET, CombinedHTS…) when it emits worksheet events.
+  // We pre-read both workbook.xml and workbook.xml.rels to build that map ourselves.
+
+  private async preReadSheetNames(xlsxPath: string): Promise<Map<string, string>> {
+    // Returns: internal filename WITHOUT extension (e.g. "sheet1") → tab name (e.g. "CombinedRADET")
+    const nameMap = new Map<string, string>();
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const unzipper = require('unzipper') as {
+        Open: {
+          file(p: string): Promise<{
+            files: Array<{ path: string; buffer(): Promise<Buffer> }>;
+          }>;
+        };
+      };
+      const dir = await unzipper.Open.file(xlsxPath);
+
+      const wbFile   = dir.files.find(f => f.path === 'xl/workbook.xml');
+      const relsFile = dir.files.find(f => f.path === 'xl/_rels/workbook.xml.rels');
+      if (!wbFile || !relsFile) {
+        this.logger.warn('AggregationEngine: workbook.xml or workbook.xml.rels not found — sheet names may be wrong');
+        return nameMap;
+      }
+
+      const [wbXml, relsXml] = await Promise.all([
+        wbFile.buffer().then(b => b.toString('utf8')),
+        relsFile.buffer().then(b => b.toString('utf8')),
+      ]);
+
+      // workbook.xml: build r:id → tab name
+      const ridToName = new Map<string, string>();
+      const sheetRe = /<[^>]*?sheet\s[^>]*/g;
+      let m: RegExpExecArray | null;
+      while ((m = sheetRe.exec(wbXml)) !== null) {
+        const elem = m[0];
+        const nameMatch = elem.match(/\bname="([^"]+)"/);
+        const ridMatch  = elem.match(/\br:id="([^"]+)"/);
+        if (nameMatch && ridMatch) ridToName.set(ridMatch[1], nameMatch[1]);
+      }
+
+      // workbook.xml.rels: r:id → internal filename (without extension)
+      const relRe = /<Relationship\s[^>]*/g;
+      while ((m = relRe.exec(relsXml)) !== null) {
+        const elem = m[0];
+        if (!elem.toLowerCase().includes('worksheet')) continue;
+        const targetMatch = elem.match(/\bTarget="([^"]+)"/);
+        const idMatch     = elem.match(/\bId="([^"]+)"/);
+        if (!targetMatch || !idMatch) continue;
+        const parts    = targetMatch[1].split('/');
+        const filename = parts[parts.length - 1].replace('.xml', '');
+        const tabName  = ridToName.get(idMatch[1]);
+        if (tabName) nameMap.set(filename, tabName);
+      }
+
+      this.logger.info(
+        `AggregationEngine: pre-loaded ${nameMap.size} sheet name mappings ` +
+        `(${[...nameMap.entries()].map(([k, v]) => `${k}→${v}`).join(', ')})`,
+      );
+    } catch (err) {
+      this.logger.warn(`AggregationEngine: failed to pre-read sheet names (${String(err)})`);
+    }
+    return nameMap;
   }
 
   // ─── Shared-string pre-reader ────────────────────────────────────────────
