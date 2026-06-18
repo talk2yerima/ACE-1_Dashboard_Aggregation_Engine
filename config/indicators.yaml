@@ -374,36 +374,6 @@ indicators:
     aggregation: COUNT
     disaggregation: Sex
 
-  - name: Total_Transfer_out
-    description: "Total Transferred Out in FY"
-    source: Sheet1
-    periodColumn: DateOfCurrentARTStatus
-    requiredColumns:
-      - CurrentARTStatus
-      - DateOfCurrentARTStatus
-      - Sex
-      - Age
-      - Facility
-      - DATIMCode
-      - State
-    filters:
-      - column: DateOfCurrentARTStatus
-        operator: dateinRange
-        value: CurrentFY
-      - column: CurrentARTStatus
-        operator: inList
-        value:
-          - "Transferred Out"
-        caseSensitive: false
-    groupBy:
-      - Facility
-      - DATIMCode
-      - State
-      - Sex
-      - AgeBand
-    aggregation: COUNT
-    disaggregation: Sex
-
   - name: Total_IIT
     description: "Total IIT in FY"
     source: Sheet1
@@ -1407,13 +1377,13 @@ indicators:
     aggregation: COUNT
     disaggregation: Sex
 
-  - name: TPT initiated — clients already on treatment
+  - name: TPT_initiated_clients_already_on_treatment
     description: "TPT initiated — clients already on treatment"
     source: Sheet1
-    periodColumn: DateofTPTStart
+    periodColumn: DateOfTPTStart
     requiredColumns:
       - CurrentARTStatus
-      - dateofTPTStart
+      - DateOfTPTStart
       - Facility
       - DATIMCode
       - State
@@ -1426,9 +1396,9 @@ indicators:
           - "Active"
           - "Active Restart"
         caseSensitive: false
-      - column: DateofTPTStart
-        operator: dateMode
-        value: currentFY
+      - column: DateOfTPTStart
+        operator: dateinRange
+        value: CurrentFY
     groupBy:
       - Facility
       - DATIMCode
@@ -1438,15 +1408,15 @@ indicators:
     aggregation: COUNT
     disaggregation: Sex
 
-  - name: TPT initiated — clients newly on treatment
+  - name: TPT_initiated_clients_newly_on_treatment
     description: "TPT initiated — clients newly on treatment"
     source: Sheet1
-    periodColumn: DateofTPTStart
+    periodColumn: DateOfTPTStart
     requiredColumns:
       - CurrentARTStatus
-      - artStartDate
-      - careEntryPoint
-      - dateofTPTStart
+      - ARTStartDate
+      - CareEntryPoint
+      - DateOfTPTStart
       - Facility
       - DATIMCode
       - State
@@ -1459,16 +1429,56 @@ indicators:
           - "Active"
           - "Active Restart"
         caseSensitive: false
-      - column: careEntryPoint
+      - column: CareEntryPoint
         operator: notContains
         value: "transfer"
         caseSensitive: false
-      - column: artStartDate
+      - column: ARTStartDate
         operator: dateinRange
-        value: currentFY
-      - column: DateofTPTStart
-        operator: dateMode
-        value: currentFY
+        value: CurrentFY
+      - column: DateOfTPTStart
+        operator: dateinRange
+        value: CurrentFY
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: TB_clients_newly_on_treatment
+    description: "TX_TB — clients newly on treatment"
+    source: Sheet1
+    periodColumn: TBTreatmentStartDate
+    requiredColumns:
+      - CurrentARTStatus
+      - ARTStartDate
+      - CareEntryPoint
+      - TBTreatmentStartDate
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - Age
+    filters:
+      - column: CurrentARTStatus
+        operator: inList
+        value:
+          - "Active"
+          - "Active Restart"
+        caseSensitive: false
+      - column: CareEntryPoint
+        operator: notContains
+        value: "transfer"
+        caseSensitive: false
+      - column: ARTStartDate
+        operator: dateinRange
+        value: CurrentFY
+      - column: TBTreatmentStartDate
+        operator: dateinRange
+        value: CurrentFY
     groupBy:
       - Facility
       - DATIMCode
