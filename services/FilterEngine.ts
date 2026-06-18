@@ -16,8 +16,12 @@ export interface FilterDef {
     | 'greaterThanOrEqual'
     | 'lessThanOrEqual'
     | 'isNotNull'
-    | 'isNull';
+    | 'isNull'
+    | 'equalsColumn'
+    | 'notEqualsColumn';
   value?: unknown;
+  /** For equalsColumn / notEqualsColumn: the other column name to compare against */
+  valueColumn?: string;
   caseSensitive?: boolean;
 }
 
@@ -115,6 +119,16 @@ export class FilterEngine {
 
       case 'lessThanOrEqual':
         return this.toNum(raw) <= this.toNum(value);
+
+      case 'equalsColumn': {
+        const other = filter.valueColumn ? row[filter.valueColumn] : undefined;
+        return this.normalizeStr(raw, caseSensitive) === this.normalizeStr(other, caseSensitive);
+      }
+
+      case 'notEqualsColumn': {
+        const other = filter.valueColumn ? row[filter.valueColumn] : undefined;
+        return this.normalizeStr(raw, caseSensitive) !== this.normalizeStr(other, caseSensitive);
+      }
 
       default:
         this.logger.warn(`Unknown filter operator: ${operator}`);

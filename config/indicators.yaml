@@ -239,3 +239,63 @@ indicators:
       - AgeBand
     aggregation: COUNT
     disaggregation: Sex
+
+  - name: TB_ACTIVE_INIT_TREAT_NEW_CARE
+    description: "Number of PLHIV on ART with active TB disease who initiated TB treatment (New Care)"
+    source: CombinedRADET
+    periodColumn: TBTreatmentStartDate
+    requiredColumns:
+      - TBTreatmentStartDate
+      - EnrollmentDate
+      - TBType
+      - CurrentARTStatus
+      - Sex
+      - Age
+      - DATIMCode
+    filters:
+      - column: CurrentARTStatus
+        operator: equals
+        value: "Active"
+      - column: TBTreatmentStartDate
+        operator: isNotNull
+      - column: EnrollmentDate
+        operator: equalsColumn
+        valueColumn: TBTreatmentStartDate
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: TB_ACTIVE_INIT_TREAT_CLINIC_ENCOUNTER
+    description: "Number of PLHIV on ART with active TB disease who initiated TB treatment (Clinic Encounter)"
+    source: CombinedRADET
+    periodColumn: TBTreatmentStartDate
+    requiredColumns:
+      - TBTreatmentStartDate
+      - ARTStartDate
+      - TBType
+      - CurrentARTStatus
+      - Sex
+      - Age
+      - DATIMCode
+    filters:
+      - column: CurrentARTStatus
+        operator: equals
+        value: "Active"
+      - column: TBTreatmentStartDate
+        operator: isNotNull
+      - column: ARTStartDate
+        operator: notEqualsColumn
+        valueColumn: TBTreatmentStartDate
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
