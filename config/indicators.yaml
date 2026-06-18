@@ -52,6 +52,1116 @@ indicators:
     aggregation: COUNT
     disaggregation: Sex
 
+  # ── HTS Modality Breakdown ──────────────────────────────────────────────────
+
+  - name: HTS_TST_VCT
+    description: "Individuals tested for HIV via VCT"
+    source: CombinedHTS
+    periodColumn: DateOfHIVTesting
+    requiredColumns:
+      - DateOfHIVTesting
+      - Modality
+      - Sex
+      - Age
+      - DATIMCode
+    filters:
+      - column: DateOfHIVTesting
+        operator: dateMode
+        value: DAILY
+      - column: Modality
+        operator: equals
+        value: "VCT"
+        caseSensitive: false
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: HTS_POS_VCT
+    description: "HIV positive individuals tested via VCT"
+    source: CombinedHTS
+    periodColumn: DateOfHIVTesting
+    requiredColumns:
+      - FinalHIVTestResult
+      - DateOfHIVTesting
+      - Modality
+      - Sex
+      - Age
+      - DATIMCode
+    filters:
+      - column: DateOfHIVTesting
+        operator: dateMode
+        value: DAILY
+      - column: Modality
+        operator: equals
+        value: "VCT"
+        caseSensitive: false
+      - column: FinalHIVTestResult
+        operator: equals
+        value: "Positive"
+        caseSensitive: false
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: HTS_TST_OPD_Other_PITC
+    description: "Individuals tested for HIV via OPD / Other PITC (includes blanks)"
+    source: CombinedHTS
+    periodColumn: DateOfHIVTesting
+    requiredColumns:
+      - DateOfHIVTesting
+      - Modality
+      - Sex
+      - Age
+      - DATIMCode
+    filters:
+      - column: DateOfHIVTesting
+        operator: dateMode
+        value: DAILY
+      - column: Modality
+        operator: inList
+        value:
+          - "Other PITC"
+          - ""
+        caseSensitive: false
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: HTS_POS_OPD_Other_PITC
+    description: "HIV positive individuals tested via OPD / Other PITC (includes blanks)"
+    source: CombinedHTS
+    periodColumn: DateOfHIVTesting
+    requiredColumns:
+      - FinalHIVTestResult
+      - DateOfHIVTesting
+      - Modality
+      - Sex
+      - Age
+      - DATIMCode
+    filters:
+      - column: DateOfHIVTesting
+        operator: dateMode
+        value: DAILY
+      - column: Modality
+        operator: inList
+        value:
+          - "Other PITC"
+          - ""
+        caseSensitive: false
+      - column: FinalHIVTestResult
+        operator: equals
+        value: "Positive"
+        caseSensitive: false
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: HTS_TST_PMTCT_ANC1
+    description: "Individuals tested for HIV via PMTCT (ANC1 Only)"
+    source: CombinedHTS
+    periodColumn: DateOfHIVTesting
+    requiredColumns:
+      - DateOfHIVTesting
+      - Modality
+      - Sex
+      - Age
+      - DATIMCode
+    filters:
+      - column: DateOfHIVTesting
+        operator: dateMode
+        value: DAILY
+      - column: Modality
+        operator: equals
+        value: "PMTCT (ANC1 Only)"
+        caseSensitive: false
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: HTS_POS_PMTCT_ANC1
+    description: "HIV positive individuals tested via PMTCT (ANC1 Only)"
+    source: CombinedHTS
+    periodColumn: DateOfHIVTesting
+    requiredColumns:
+      - FinalHIVTestResult
+      - DateOfHIVTesting
+      - Modality
+      - Sex
+      - Age
+      - DATIMCode
+    filters:
+      - column: DateOfHIVTesting
+        operator: dateMode
+        value: DAILY
+      - column: Modality
+        operator: equals
+        value: "PMTCT (ANC1 Only)"
+        caseSensitive: false
+      - column: FinalHIVTestResult
+        operator: equals
+        value: "Positive"
+        caseSensitive: false
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: HTS_TST_PMTCT_PostANC1_Pregnancy
+    description: "Individuals tested for HIV via PMTCT (Post ANC1: Pregnancy/L&D)"
+    source: CombinedHTS
+    periodColumn: DateOfHIVTesting
+    requiredColumns:
+      - DateOfHIVTesting
+      - Modality
+      - Sex
+      - Age
+      - DATIMCode
+    filters:
+      - column: DateOfHIVTesting
+        operator: dateMode
+        value: DAILY
+      - column: Modality
+        operator: equals
+        value: "PMTCT (Post ANC1: Pregnancy/L&D)"
+        caseSensitive: false
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: HTS_POS_PMTCT_PostANC1_Pregnancy
+    description: "HIV positive individuals tested via PMTCT (Post ANC1: Pregnancy/L&D)"
+    source: CombinedHTS
+    periodColumn: DateOfHIVTesting
+    requiredColumns:
+      - FinalHIVTestResult
+      - DateOfHIVTesting
+      - Modality
+      - Sex
+      - Age
+      - DATIMCode
+    filters:
+      - column: DateOfHIVTesting
+        operator: dateMode
+        value: DAILY
+      - column: Modality
+        operator: equals
+        value: "PMTCT (Post ANC1: Pregnancy/L&D)"
+        caseSensitive: false
+      - column: FinalHIVTestResult
+        operator: equals
+        value: "Positive"
+        caseSensitive: false
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: HTS_TST_Index
+    description: "Individuals tested for HIV via Index testing"
+    source: CombinedHTS
+    periodColumn: DateOfHIVTesting
+    requiredColumns:
+      - DateOfHIVTesting
+      - Modality
+      - Sex
+      - Age
+      - DATIMCode
+    filters:
+      - column: DateOfHIVTesting
+        operator: dateMode
+        value: DAILY
+      - column: Modality
+        operator: equals
+        value: "Index"
+        caseSensitive: false
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: HTS_POS_Index
+    description: "HIV positive individuals tested via Index testing"
+    source: CombinedHTS
+    periodColumn: DateOfHIVTesting
+    requiredColumns:
+      - FinalHIVTestResult
+      - DateOfHIVTesting
+      - Modality
+      - Sex
+      - Age
+      - DATIMCode
+    filters:
+      - column: DateOfHIVTesting
+        operator: dateMode
+        value: DAILY
+      - column: Modality
+        operator: equals
+        value: "Index"
+        caseSensitive: false
+      - column: FinalHIVTestResult
+        operator: equals
+        value: "Positive"
+        caseSensitive: false
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: HTS_TST_PrEP
+    description: "Individuals tested for HIV via PrEP_CT HTS"
+    source: CombinedHTS
+    periodColumn: DateOfHIVTesting
+    requiredColumns:
+      - DateOfHIVTesting
+      - Modality
+      - Sex
+      - Age
+      - DATIMCode
+    filters:
+      - column: DateOfHIVTesting
+        operator: dateMode
+        value: DAILY
+      - column: Modality
+        operator: equals
+        value: "PrEP_CT HTS"
+        caseSensitive: false
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: HTS_POS_PrEP
+    description: "HIV positive individuals tested via PrEP_CT HTS"
+    source: CombinedHTS
+    periodColumn: DateOfHIVTesting
+    requiredColumns:
+      - FinalHIVTestResult
+      - DateOfHIVTesting
+      - Modality
+      - Sex
+      - Age
+      - DATIMCode
+    filters:
+      - column: DateOfHIVTesting
+        operator: dateMode
+        value: DAILY
+      - column: Modality
+        operator: equals
+        value: "PrEP_CT HTS"
+        caseSensitive: false
+      - column: FinalHIVTestResult
+        operator: equals
+        value: "Positive"
+        caseSensitive: false
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: HTS_TST_Mobile
+    description: "Individuals tested for HIV via Mobile outreach"
+    source: CombinedHTS
+    periodColumn: DateOfHIVTesting
+    requiredColumns:
+      - DateOfHIVTesting
+      - Modality
+      - Sex
+      - Age
+      - DATIMCode
+    filters:
+      - column: DateOfHIVTesting
+        operator: dateMode
+        value: DAILY
+      - column: Modality
+        operator: equals
+        value: "Mobile"
+        caseSensitive: false
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: HTS_POS_Mobile
+    description: "HIV positive individuals tested via Mobile outreach"
+    source: CombinedHTS
+    periodColumn: DateOfHIVTesting
+    requiredColumns:
+      - FinalHIVTestResult
+      - DateOfHIVTesting
+      - Modality
+      - Sex
+      - Age
+      - DATIMCode
+    filters:
+      - column: DateOfHIVTesting
+        operator: dateMode
+        value: DAILY
+      - column: Modality
+        operator: equals
+        value: "Mobile"
+        caseSensitive: false
+      - column: FinalHIVTestResult
+        operator: equals
+        value: "Positive"
+        caseSensitive: false
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: HTS_TST_Other_Community
+    description: "Individuals tested for HIV via Other Community Platforms"
+    source: CombinedHTS
+    periodColumn: DateOfHIVTesting
+    requiredColumns:
+      - DateOfHIVTesting
+      - Modality
+      - Sex
+      - Age
+      - DATIMCode
+    filters:
+      - column: DateOfHIVTesting
+        operator: dateMode
+        value: DAILY
+      - column: Modality
+        operator: equals
+        value: "Other Community Platforms"
+        caseSensitive: false
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: HTS_POS_Other_Community
+    description: "HIV positive individuals tested via Other Community Platforms"
+    source: CombinedHTS
+    periodColumn: DateOfHIVTesting
+    requiredColumns:
+      - FinalHIVTestResult
+      - DateOfHIVTesting
+      - Modality
+      - Sex
+      - Age
+      - DATIMCode
+    filters:
+      - column: DateOfHIVTesting
+        operator: dateMode
+        value: DAILY
+      - column: Modality
+        operator: equals
+        value: "Other Community Platforms"
+        caseSensitive: false
+      - column: FinalHIVTestResult
+        operator: equals
+        value: "Positive"
+        caseSensitive: false
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: HTS_TST_TB_STAT
+    description: "Individuals tested for HIV via TB_STAT/OtherPITC"
+    source: CombinedHTS
+    periodColumn: DateOfHIVTesting
+    requiredColumns:
+      - DateOfHIVTesting
+      - Modality
+      - Sex
+      - Age
+      - DATIMCode
+    filters:
+      - column: DateOfHIVTesting
+        operator: dateMode
+        value: DAILY
+      - column: Modality
+        operator: equals
+        value: "TB_STAT/OtherPITC"
+        caseSensitive: false
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: HTS_POS_TB_STAT
+    description: "HIV positive individuals tested via TB_STAT/OtherPITC"
+    source: CombinedHTS
+    periodColumn: DateOfHIVTesting
+    requiredColumns:
+      - FinalHIVTestResult
+      - DateOfHIVTesting
+      - Modality
+      - Sex
+      - Age
+      - DATIMCode
+    filters:
+      - column: DateOfHIVTesting
+        operator: dateMode
+        value: DAILY
+      - column: Modality
+        operator: equals
+        value: "TB_STAT/OtherPITC"
+        caseSensitive: false
+      - column: FinalHIVTestResult
+        operator: equals
+        value: "Positive"
+        caseSensitive: false
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: HTS_TST_Malnutrition
+    description: "Individuals tested for HIV via Malnutrition screening"
+    source: CombinedHTS
+    periodColumn: DateOfHIVTesting
+    requiredColumns:
+      - DateOfHIVTesting
+      - Modality
+      - Sex
+      - Age
+      - DATIMCode
+    filters:
+      - column: DateOfHIVTesting
+        operator: dateMode
+        value: DAILY
+      - column: Modality
+        operator: equals
+        value: "Malnutrition"
+        caseSensitive: false
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: HTS_POS_Malnutrition
+    description: "HIV positive individuals tested via Malnutrition screening"
+    source: CombinedHTS
+    periodColumn: DateOfHIVTesting
+    requiredColumns:
+      - FinalHIVTestResult
+      - DateOfHIVTesting
+      - Modality
+      - Sex
+      - Age
+      - DATIMCode
+    filters:
+      - column: DateOfHIVTesting
+        operator: dateMode
+        value: DAILY
+      - column: Modality
+        operator: equals
+        value: "Malnutrition"
+        caseSensitive: false
+      - column: FinalHIVTestResult
+        operator: equals
+        value: "Positive"
+        caseSensitive: false
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: HTS_TST_Inpatient
+    description: "Individuals tested for HIV via Inpatient"
+    source: CombinedHTS
+    periodColumn: DateOfHIVTesting
+    requiredColumns:
+      - DateOfHIVTesting
+      - Modality
+      - Sex
+      - Age
+      - DATIMCode
+    filters:
+      - column: DateOfHIVTesting
+        operator: dateMode
+        value: DAILY
+      - column: Modality
+        operator: equals
+        value: "Inpatient"
+        caseSensitive: false
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: HTS_POS_Inpatient
+    description: "HIV positive individuals tested via Inpatient"
+    source: CombinedHTS
+    periodColumn: DateOfHIVTesting
+    requiredColumns:
+      - FinalHIVTestResult
+      - DateOfHIVTesting
+      - Modality
+      - Sex
+      - Age
+      - DATIMCode
+    filters:
+      - column: DateOfHIVTesting
+        operator: dateMode
+        value: DAILY
+      - column: Modality
+        operator: equals
+        value: "Inpatient"
+        caseSensitive: false
+      - column: FinalHIVTestResult
+        operator: equals
+        value: "Positive"
+        caseSensitive: false
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: HTS_TST_PMTCT_PostANC1_BF
+    description: "Individuals tested for HIV via PMTCT (Post ANC1: Breastfeeding)"
+    source: CombinedHTS
+    periodColumn: DateOfHIVTesting
+    requiredColumns:
+      - DateOfHIVTesting
+      - Modality
+      - Sex
+      - Age
+      - DATIMCode
+    filters:
+      - column: DateOfHIVTesting
+        operator: dateMode
+        value: DAILY
+      - column: Modality
+        operator: equals
+        value: "PMTCT (Post ANC1: Breastfeeding)"
+        caseSensitive: false
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: HTS_POS_PMTCT_PostANC1_BF
+    description: "HIV positive individuals tested via PMTCT (Post ANC1: Breastfeeding)"
+    source: CombinedHTS
+    periodColumn: DateOfHIVTesting
+    requiredColumns:
+      - FinalHIVTestResult
+      - DateOfHIVTesting
+      - Modality
+      - Sex
+      - Age
+      - DATIMCode
+    filters:
+      - column: DateOfHIVTesting
+        operator: dateMode
+        value: DAILY
+      - column: Modality
+        operator: equals
+        value: "PMTCT (Post ANC1: Breastfeeding)"
+        caseSensitive: false
+      - column: FinalHIVTestResult
+        operator: equals
+        value: "Positive"
+        caseSensitive: false
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: HTS_TST_Pediatric
+    description: "Individuals tested for HIV via Pediatric"
+    source: CombinedHTS
+    periodColumn: DateOfHIVTesting
+    requiredColumns:
+      - DateOfHIVTesting
+      - Modality
+      - Sex
+      - Age
+      - DATIMCode
+    filters:
+      - column: DateOfHIVTesting
+        operator: dateMode
+        value: DAILY
+      - column: Modality
+        operator: equals
+        value: "Pediatric"
+        caseSensitive: false
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: HTS_POS_Pediatric
+    description: "HIV positive individuals tested via Pediatric"
+    source: CombinedHTS
+    periodColumn: DateOfHIVTesting
+    requiredColumns:
+      - FinalHIVTestResult
+      - DateOfHIVTesting
+      - Modality
+      - Sex
+      - Age
+      - DATIMCode
+    filters:
+      - column: DateOfHIVTesting
+        operator: dateMode
+        value: DAILY
+      - column: Modality
+        operator: equals
+        value: "Pediatric"
+        caseSensitive: false
+      - column: FinalHIVTestResult
+        operator: equals
+        value: "Positive"
+        caseSensitive: false
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: HTS_TST_Emergency
+    description: "Individuals tested for HIV via Emergency"
+    source: CombinedHTS
+    periodColumn: DateOfHIVTesting
+    requiredColumns:
+      - DateOfHIVTesting
+      - Modality
+      - Sex
+      - Age
+      - DATIMCode
+    filters:
+      - column: DateOfHIVTesting
+        operator: dateMode
+        value: DAILY
+      - column: Modality
+        operator: equals
+        value: "Emergency"
+        caseSensitive: false
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: HTS_POS_Emergency
+    description: "HIV positive individuals tested via Emergency"
+    source: CombinedHTS
+    periodColumn: DateOfHIVTesting
+    requiredColumns:
+      - FinalHIVTestResult
+      - DateOfHIVTesting
+      - Modality
+      - Sex
+      - Age
+      - DATIMCode
+    filters:
+      - column: DateOfHIVTesting
+        operator: dateMode
+        value: DAILY
+      - column: Modality
+        operator: equals
+        value: "Emergency"
+        caseSensitive: false
+      - column: FinalHIVTestResult
+        operator: equals
+        value: "Positive"
+        caseSensitive: false
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: HTS_TST_STI
+    description: "Individuals tested for HIV via STI"
+    source: CombinedHTS
+    periodColumn: DateOfHIVTesting
+    requiredColumns:
+      - DateOfHIVTesting
+      - Modality
+      - Sex
+      - Age
+      - DATIMCode
+    filters:
+      - column: DateOfHIVTesting
+        operator: dateMode
+        value: DAILY
+      - column: Modality
+        operator: equals
+        value: "STI"
+        caseSensitive: false
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: HTS_POS_STI
+    description: "HIV positive individuals tested via STI"
+    source: CombinedHTS
+    periodColumn: DateOfHIVTesting
+    requiredColumns:
+      - FinalHIVTestResult
+      - DateOfHIVTesting
+      - Modality
+      - Sex
+      - Age
+      - DATIMCode
+    filters:
+      - column: DateOfHIVTesting
+        operator: dateMode
+        value: DAILY
+      - column: Modality
+        operator: equals
+        value: "STI"
+        caseSensitive: false
+      - column: FinalHIVTestResult
+        operator: equals
+        value: "Positive"
+        caseSensitive: false
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  # ── End HTS Modality Breakdown ───────────────────────────────────────────────
+
+  # ── Index Testing Cascade ────────────────────────────────────────────────────
+
+  - name: Eligible_for_Index
+    description: "Clients newly on treatment, unsuppressed VL, or Active Restart — eligible for index testing"
+    source: CombinedRADET
+    requiredColumns:
+      - CurrentARTStatus
+      - ARTStartDate
+      - CurrentViralLoad
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - Age
+    filters:
+      - column: CurrentARTStatus
+        operator: inList
+        value:
+          - "Active"
+          - "Active Restart"
+        caseSensitive: false
+    anyOf:
+      - column: ARTStartDate
+        operator: dateinRange
+        value: CurrentFY
+      - column: CurrentViralLoad
+        operator: greaterThanOrEqual
+        value: 1000
+      - column: CurrentARTStatus
+        operator: equals
+        value: "Active Restart"
+        caseSensitive: false
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: offered_index_testing
+    description: "Eligible clients offered index testing services"
+    source: CombineIndex
+    periodColumn: DateOfferedIndexTesting
+    requiredColumns:
+      - DateOfferedIndexTesting
+      - Sex
+      - Age
+      - DATIMCode
+    filters:
+      - column: DateOfferedIndexTesting
+        operator: dateMode
+        value: DAILY
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: Accepted_Index_Testing
+    description: "Eligible clients who accepted index testing"
+    source: CombineIndex
+    periodColumn: DateOfferedIndexTesting
+    requiredColumns:
+      - DateOfferedIndexTesting
+      - AcceptedIndexTesting
+      - Sex
+      - Age
+      - DATIMCode
+    filters:
+      - column: DateOfferedIndexTesting
+        operator: dateMode
+        value: DAILY
+      - column: AcceptedIndexTesting
+        operator: equals
+        value: "Yes"
+        caseSensitive: false
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: Contact_Elicitation
+    description: "Contacts elicited during index testing cascade"
+    source: CombineIndex
+    periodColumn: DateOfElicitation
+    requiredColumns:
+      - DateOfElicitation
+      - Sex
+      - Age
+      - DATIMCode
+    filters:
+      - column: DateOfElicitation
+        operator: dateMode
+        value: DAILY
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: HTS_Index_Testing
+    description: "Contacts elicited who received HIV testing via index setting"
+    source: CombinedHTS
+    periodColumn: DateOfHIVTesting
+    requiredColumns:
+      - TestingSetting
+      - DateOfHIVTesting
+      - Sex
+      - Age
+      - DATIMCode
+    filters:
+      - column: TestingSetting
+        operator: equals
+        value: "Index"
+        caseSensitive: false
+      - column: DateOfHIVTesting
+        operator: dateMode
+        value: DAILY
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: HTS_Index_Testing_positive
+    description: "Contacts who tested HIV positive via index testing"
+    source: CombinedHTS
+    periodColumn: DateOfHIVTesting
+    requiredColumns:
+      - TestingSetting
+      - FinalHIVTestResult
+      - DateOfHIVTesting
+      - Sex
+      - Age
+      - DATIMCode
+    filters:
+      - column: TestingSetting
+        operator: equals
+        value: "Index"
+        caseSensitive: false
+      - column: FinalHIVTestResult
+        operator: equals
+        value: "Positive"
+        caseSensitive: false
+      - column: DateOfHIVTesting
+        operator: dateMode
+        value: DAILY
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: Index_ART_Initiated
+    description: "Index-positive contacts whose PatientId exists in RADET as Active/Active Restart"
+    source: CombinedHTS
+    periodColumn: DateOfHIVTesting
+    crossSheetLookup:
+      fromSheet: CombinedRADET
+      fromColumn: PatientId
+      matchColumn: PatientId
+      lookupFilters:
+        - column: CurrentARTStatus
+          operator: inList
+          value:
+            - "Active"
+            - "Active Restart"
+          caseSensitive: false
+    requiredColumns:
+      - TestingSetting
+      - FinalHIVTestResult
+      - DateOfHIVTesting
+      - PatientId
+      - Sex
+      - Age
+      - DATIMCode
+    filters:
+      - column: TestingSetting
+        operator: equals
+        value: "Index"
+        caseSensitive: false
+      - column: FinalHIVTestResult
+        operator: equals
+        value: "Positive"
+        caseSensitive: false
+      - column: DateOfHIVTesting
+        operator: dateMode
+        value: DAILY
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  # ── End Index Testing Cascade ─────────────────────────────────────────────────
+
   - name: Newly_Enrolled
     description: "Newly enrolled patients on ART"
     source: CombinedRADET
@@ -951,11 +2061,8 @@ indicators:
   - name: PVLSN
     description: "ART patients with suppressed VL (<1,000 copies/ml) on ART >= 6 months (numerator)"
     source: CombinedRADET
-    periodColumn: DateOfCurrentViralLoad
     requiredColumns:
       - CurrentARTStatus
-      - DateOfVLSampleCollection
-      - DateOfCurrentViralLoad
       - CurrentViralLoad
       - DateOfCurrentVLResultSample
       - ARTStartDate
@@ -966,15 +2073,16 @@ indicators:
       - State
     filters:
       - column: CurrentARTStatus
-        operator: contains
-        value: "Active"
+        operator: inList
+        value:
+          - "Active"
+          - "Active Restart"
         caseSensitive: false
       - column: CurrentViralLoad
         operator: lessThan
         value: 1000
-      - column: DateOfCurrentViralLoad
-        operator: dateinRange
-        value: CurrentFY
+      - column: DateOfCurrentVLResultSample
+        operator: isNotNull
       - column: DateOfCurrentVLResultSample
         operator: dateDiff
         ref: ARTStartDate
@@ -989,12 +2097,10 @@ indicators:
     disaggregation: Sex
 
   - name: VL Result Received_PVLSD
-    description: "ART patients with documented VL result in FY on ART >= 6 months (denominator)"
+    description: "ART patients with documented VL result on ART >= 6 months (denominator)"
     source: CombinedRADET
-    periodColumn: DateOfCurrentViralLoad
     requiredColumns:
       - CurrentARTStatus
-      - DateOfCurrentViralLoad
       - DateOfCurrentVLResultSample
       - ARTStartDate
       - Sex
@@ -1004,12 +2110,13 @@ indicators:
       - State
     filters:
       - column: CurrentARTStatus
-        operator: contains
-        value: "Active"
+        operator: inList
+        value:
+          - "Active"
+          - "Active Restart"
         caseSensitive: false
-      - column: DateOfCurrentViralLoad
-        operator: dateinRange
-        value: CurrentFY
+      - column: DateOfCurrentVLResultSample
+        operator: isNotNull
       - column: DateOfCurrentVLResultSample
         operator: dateDiff
         ref: ARTStartDate
@@ -1062,10 +2169,8 @@ indicators:
   - name: PVLSN_pregnant_Women
     description: "Pregnant/breastfeeding ART patients with suppressed VL (<1,000 copies/ml)"
     source: CombinedRADET
-    periodColumn: DateOfCurrentViralLoad
     requiredColumns:
       - CurrentARTStatus
-      - DateOfCurrentViralLoad
       - CurrentViralLoad
       - DateOfCurrentVLResultSample
       - ARTStartDate
@@ -1077,12 +2182,11 @@ indicators:
       - State
     filters:
       - column: CurrentARTStatus
-        operator: contains
-        value: "Active"
+        operator: inList
+        value:
+          - "Active"
+          - "Active Restart"
         caseSensitive: false
-      - column: DateOfCurrentViralLoad
-        operator: dateinRange
-        value: CurrentFY
       - column: PregnancyStatus
         operator: inList
         value:
@@ -1092,6 +2196,8 @@ indicators:
       - column: CurrentViralLoad
         operator: lessThan
         value: 1000
+      - column: DateOfCurrentVLResultSample
+        operator: isNotNull
       - column: DateOfCurrentVLResultSample
         operator: dateDiff
         ref: ARTStartDate
@@ -1106,12 +2212,10 @@ indicators:
     disaggregation: Sex
 
   - name: PVLSD_pregnant_Women
-    description: "Pregnant/breastfeeding ART patients with documented VL in FY (denominator)"
+    description: "Pregnant/breastfeeding ART patients with documented VL result (denominator)"
     source: CombinedRADET
-    periodColumn: DateOfCurrentViralLoad
     requiredColumns:
       - CurrentARTStatus
-      - DateOfCurrentViralLoad
       - DateOfCurrentVLResultSample
       - ARTStartDate
       - PregnancyStatus
@@ -1122,18 +2226,19 @@ indicators:
       - State
     filters:
       - column: CurrentARTStatus
-        operator: contains
-        value: "Active"
+        operator: inList
+        value:
+          - "Active"
+          - "Active Restart"
         caseSensitive: false
-      - column: DateOfCurrentViralLoad
-        operator: dateinRange
-        value: CurrentFY
       - column: PregnancyStatus
         operator: inList
         value:
           - "Pregnant"
           - "Breastfeeding"
         caseSensitive: false
+      - column: DateOfCurrentVLResultSample
+        operator: isNotNull
       - column: DateOfCurrentVLResultSample
         operator: dateDiff
         ref: ARTStartDate
@@ -1182,10 +2287,8 @@ indicators:
   - name: PVLSN_Children_lessthan_20yrs
     description: "Children under 20yrs ART patients with suppressed VL (<1,000 copies/ml)"
     source: CombinedRADET
-    periodColumn: DateOfCurrentViralLoad
     requiredColumns:
       - CurrentARTStatus
-      - DateOfCurrentViralLoad
       - CurrentViralLoad
       - DateOfCurrentVLResultSample
       - ARTStartDate
@@ -1196,18 +2299,19 @@ indicators:
       - State
     filters:
       - column: CurrentARTStatus
-        operator: contains
-        value: "Active"
+        operator: inList
+        value:
+          - "Active"
+          - "Active Restart"
         caseSensitive: false
-      - column: DateOfCurrentViralLoad
-        operator: dateinRange
-        value: CurrentFY
       - column: Age
         operator: lessThan
         value: 20
       - column: CurrentViralLoad
         operator: lessThan
         value: 1000
+      - column: DateOfCurrentVLResultSample
+        operator: isNotNull
       - column: DateOfCurrentVLResultSample
         operator: dateDiff
         ref: ARTStartDate
@@ -1222,12 +2326,10 @@ indicators:
     disaggregation: Sex
 
   - name: PVLSD_children_lessthan_20yrs
-    description: "Children under 20yrs ART patients with documented VL in FY (denominator)"
+    description: "Children under 20yrs ART patients with documented VL result (denominator)"
     source: CombinedRADET
-    periodColumn: DateOfCurrentViralLoad
     requiredColumns:
       - CurrentARTStatus
-      - DateOfCurrentViralLoad
       - DateOfCurrentVLResultSample
       - ARTStartDate
       - Sex
@@ -1237,15 +2339,16 @@ indicators:
       - State
     filters:
       - column: CurrentARTStatus
-        operator: contains
-        value: "Active"
+        operator: inList
+        value:
+          - "Active"
+          - "Active Restart"
         caseSensitive: false
-      - column: DateOfCurrentViralLoad
-        operator: dateinRange
-        value: CurrentFY
       - column: Age
         operator: lessThan
         value: 20
+      - column: DateOfCurrentVLResultSample
+        operator: isNotNull
       - column: DateOfCurrentVLResultSample
         operator: dateDiff
         ref: ARTStartDate

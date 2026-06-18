@@ -47,6 +47,17 @@ export interface ComputedColumnDef {
   unit: 'day' | 'week' | 'month' | 'year';
 }
 
+export interface CrossSheetLookup {
+  /** Sheet whose column values to collect into a lookup set. */
+  fromSheet: string;
+  /** Column in fromSheet to collect (e.g. PatientId). */
+  fromColumn: string;
+  /** Column in this indicator's source sheet to check against the set. */
+  matchColumn: string;
+  /** Optional filters on fromSheet rows — only matching rows contribute to the lookup set. */
+  lookupFilters?: FilterDef[];
+}
+
 export interface IndicatorDef {
   name: string;
   description?: string;
@@ -55,6 +66,7 @@ export interface IndicatorDef {
   computedColumns?: ComputedColumnDef[];
   filters: FilterDef[];
   anyOf?: FilterDef[];   // OR group: row counted if it passes at least one of these
+  crossSheetLookup?: CrossSheetLookup;
   groupBy: string[];
   aggregation: AggregationMethod;
   disaggregation?: string;
@@ -347,12 +359,20 @@ export class AggregationEngine {
         catFilters.add(f.column);
         if (f.ref) catFilters.add(f.ref);
       }
+      // Track the matchColumn for cross-sheet lookup
+      if (ind.crossSheetLookup) catFilters.add(ind.crossSheetLookup.matchColumn);
       indFilterCols.set(ind.name, catFilters);
     }
 
     // rawAccMap: indName → rawKeyStr → RawGroupEntry
     const rawAccMap = new Map<string, Map<string, RawGroupEntry>>();
     for (const ind of this.indicatorsConfig.indicators) rawAccMap.set(ind.name, new Map());
+
+    // crossSheetSets: indName → Set of values collected from fromSheet for cross-sheet lookup
+    const crossSheetSets = new Map<string, Set<string>>();
+    for (const ind of this.indicatorsConfig.indicators) {
+      if (ind.crossSheetLookup) crossSheetSets.set(ind.name, new Set());
+    }
 
     // Org-unit raw data: col1-prefix → { stateRaw, lgaRaw, facilityRaw }
     const orgUnitSeen = new Map<string, { stateRaw: string; lgaRaw: string; facilityRaw: string }>();
@@ -509,6 +529,19 @@ export class AggregationEngine {
           });
         }
 
+        // ── Populate cross-sheet lookup sets ──────────────────────────────────
+        for (const [indName, set] of crossSheetSets) {
+          const lookup = this.indicatorsConfig.indicators.find(i => i.name === indName)!.crossSheetLookup!;
+          if (lookup.fromSheet !== sheetName) continue;
+          if (lookup.lookupFilters && lookup.lookupFilters.length > 0) {
+            const normRecord: Record<string, unknown> = {};
+            for (const [k, v] of Object.entries(record)) normRecord[k] = this.normalizeOptionValue(String(v ?? '').trim());
+            if (!this.filterEngine.passesAll(normRecord, lookup.lookupFilters)) continue;
+          }
+          const val = String(record[lookup.fromColumn] ?? '').trim();
+          if (val) set.add(val);
+        }
+
         // ── Per-indicator accumulation ─────────────────────────────────────────
         for (const ind of indicators) {
           // ── Date-range gate (replaces dateMode filter in group-by-date modes) ──
@@ -521,6 +554,13 @@ export class AggregationEngine {
             // Standard (non-group-by-date) mode: apply dateMode filter directly
             const dmFilter = ind.filters.find(f => f.operator === 'dateMode');
             if (dmFilter && !this.dateHelper.isInRange(record[dmFilter.column])) continue;
+          }
+
+          // ── Cross-sheet lookup gate ───────────────────────────────────────────
+          if (ind.crossSheetLookup) {
+            const set = crossSheetSets.get(ind.name);
+            const matchVal = String(record[ind.crossSheetLookup.matchColumn] ?? '').trim();
+            if (!set || !matchVal || !set.has(matchVal)) continue;
           }
 
           // ── Row period label ──────────────────────────────────────────────────

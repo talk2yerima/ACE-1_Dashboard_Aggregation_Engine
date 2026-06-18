@@ -122,3 +122,23 @@ CombinedHTS:
   - DateOfHIVTesting   # 24
   - PREPOffered        # 25
   - PREPAccepted       # 26
+
+CombineIndex:
+  - DATIMCode                  # 1
+  - IndexClientId              # 2  (Index client code/unique ID)
+  - Age                        # 3
+  - Sex                        # 4
+  - IndexClientEntryPoint      # 5  (Index client entry point)
+  - DateOfferedIndexTesting    # 6  (Date offered index testing)
+  - AcceptedIndexTesting       # 7  (Accepted Index Testing)
+  - DateOfElicitation          # 8  (Date of Elicitation)
+  - IndexContactId             # 9  (Index Contact ID)
+  - IndexContactAge            # 10 (Index Contact's Age)
+  - IndexContactSex            # 11 (Index Contact's Sex)
+  - RelationshipToIndex        # 12 (Relationship of contact to index)
+  - ContactType                # 13 (Type of contact)
+  - CounselingReferralSupport  # 14 (Counseling, Referral and Support services)
+  - HIVTestStatus              # 15 (HIV Test Status)
+  - HIVTestResult              # 16 (HIV Test Result)
+  - DateOfHTS                  # 17 (Date of HTS dd-mm-yyyy)
+  - DateLinkedToTreatment      # 18 (Date linked to Treatment & Care)
