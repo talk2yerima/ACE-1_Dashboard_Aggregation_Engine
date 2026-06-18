@@ -1057,12 +1057,185 @@ indicators:
     aggregation: COUNT
     disaggregation: Sex
 
-  - name: HTS_Index_Testing
-    description: "Contacts elicited who received HIV testing via index setting"
+  - name: offered_index_testing_Facility
+    description: "Eligible clients offered index testing — Facility entry point"
+    source: CombineIndex
+    periodColumn: DateOfferedIndexTesting
+    requiredColumns:
+      - DateOfferedIndexTesting
+      - IndexClientEntryPoint
+      - Sex
+      - Age
+      - DATIMCode
+    filters:
+      - column: DateOfferedIndexTesting
+        operator: dateMode
+        value: DAILY
+      - column: IndexClientEntryPoint
+        operator: equals
+        value: "Facility"
+        caseSensitive: false
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: offered_index_testing_Community
+    description: "Eligible clients offered index testing — Community entry point"
+    source: CombineIndex
+    periodColumn: DateOfferedIndexTesting
+    requiredColumns:
+      - DateOfferedIndexTesting
+      - IndexClientEntryPoint
+      - Sex
+      - Age
+      - DATIMCode
+    filters:
+      - column: DateOfferedIndexTesting
+        operator: dateMode
+        value: DAILY
+      - column: IndexClientEntryPoint
+        operator: equals
+        value: "Community"
+        caseSensitive: false
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: Accepted_Index_Testing_Facility
+    description: "Clients who accepted index testing — Facility entry point"
+    source: CombineIndex
+    periodColumn: DateOfferedIndexTesting
+    requiredColumns:
+      - DateOfferedIndexTesting
+      - AcceptedIndexTesting
+      - IndexClientEntryPoint
+      - Sex
+      - Age
+      - DATIMCode
+    filters:
+      - column: DateOfferedIndexTesting
+        operator: dateMode
+        value: DAILY
+      - column: AcceptedIndexTesting
+        operator: equals
+        value: "Yes"
+        caseSensitive: false
+      - column: IndexClientEntryPoint
+        operator: equals
+        value: "Facility"
+        caseSensitive: false
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: Accepted_Index_Testing_Community
+    description: "Clients who accepted index testing — Community entry point"
+    source: CombineIndex
+    periodColumn: DateOfferedIndexTesting
+    requiredColumns:
+      - DateOfferedIndexTesting
+      - AcceptedIndexTesting
+      - IndexClientEntryPoint
+      - Sex
+      - Age
+      - DATIMCode
+    filters:
+      - column: DateOfferedIndexTesting
+        operator: dateMode
+        value: DAILY
+      - column: AcceptedIndexTesting
+        operator: equals
+        value: "Yes"
+        caseSensitive: false
+      - column: IndexClientEntryPoint
+        operator: equals
+        value: "Community"
+        caseSensitive: false
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: Contact_Elicitation_Facility
+    description: "Contacts elicited during index testing cascade — Facility entry point"
+    source: CombineIndex
+    periodColumn: DateOfElicitation
+    requiredColumns:
+      - DateOfElicitation
+      - IndexClientEntryPoint
+      - Sex
+      - Age
+      - DATIMCode
+    filters:
+      - column: DateOfElicitation
+        operator: dateMode
+        value: DAILY
+      - column: IndexClientEntryPoint
+        operator: equals
+        value: "Facility"
+        caseSensitive: false
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: Contact_Elicitation_Community
+    description: "Contacts elicited during index testing cascade — Community entry point"
+    source: CombineIndex
+    periodColumn: DateOfElicitation
+    requiredColumns:
+      - DateOfElicitation
+      - IndexClientEntryPoint
+      - Sex
+      - Age
+      - DATIMCode
+    filters:
+      - column: DateOfElicitation
+        operator: dateMode
+        value: DAILY
+      - column: IndexClientEntryPoint
+        operator: equals
+        value: "Community"
+        caseSensitive: false
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: HTS_Index_Testing_Facility
+    description: "Index contacts tested — Facility entry point"
     source: CombinedHTS
     periodColumn: DateOfHIVTesting
     requiredColumns:
       - TestingSetting
+      - EntryPoint
       - DateOfHIVTesting
       - Sex
       - Age
@@ -1071,6 +1244,10 @@ indicators:
       - column: TestingSetting
         operator: equals
         value: "Index"
+        caseSensitive: false
+      - column: EntryPoint
+        operator: equals
+        value: "Facility"
         caseSensitive: false
       - column: DateOfHIVTesting
         operator: dateMode
@@ -1084,13 +1261,46 @@ indicators:
     aggregation: COUNT
     disaggregation: Sex
 
-  - name: HTS_Index_Testing_positive
-    description: "Contacts who tested HIV positive via index testing"
+  - name: HTS_Index_Testing_Community
+    description: "Index contacts tested — Community entry point"
+    source: CombinedHTS
+    periodColumn: DateOfHIVTesting
+    requiredColumns:
+      - TestingSetting
+      - EntryPoint
+      - DateOfHIVTesting
+      - Sex
+      - Age
+      - DATIMCode
+    filters:
+      - column: TestingSetting
+        operator: equals
+        value: "Index"
+        caseSensitive: false
+      - column: EntryPoint
+        operator: equals
+        value: "Community"
+        caseSensitive: false
+      - column: DateOfHIVTesting
+        operator: dateMode
+        value: DAILY
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: HTS_Index_Testing_positive_Facility
+    description: "Index contacts who tested HIV positive — Facility entry point"
     source: CombinedHTS
     periodColumn: DateOfHIVTesting
     requiredColumns:
       - TestingSetting
       - FinalHIVTestResult
+      - EntryPoint
       - DateOfHIVTesting
       - Sex
       - Age
@@ -1103,6 +1313,47 @@ indicators:
       - column: FinalHIVTestResult
         operator: equals
         value: "Positive"
+        caseSensitive: false
+      - column: EntryPoint
+        operator: equals
+        value: "Facility"
+        caseSensitive: false
+      - column: DateOfHIVTesting
+        operator: dateMode
+        value: DAILY
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: HTS_Index_Testing_positive_Community
+    description: "Index contacts who tested HIV positive — Community entry point"
+    source: CombinedHTS
+    periodColumn: DateOfHIVTesting
+    requiredColumns:
+      - TestingSetting
+      - FinalHIVTestResult
+      - EntryPoint
+      - DateOfHIVTesting
+      - Sex
+      - Age
+      - DATIMCode
+    filters:
+      - column: TestingSetting
+        operator: equals
+        value: "Index"
+        caseSensitive: false
+      - column: FinalHIVTestResult
+        operator: equals
+        value: "Positive"
+        caseSensitive: false
+      - column: EntryPoint
+        operator: equals
+        value: "Community"
         caseSensitive: false
       - column: DateOfHIVTesting
         operator: dateMode

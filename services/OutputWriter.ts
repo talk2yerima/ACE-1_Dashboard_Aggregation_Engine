@@ -57,6 +57,44 @@ export class OutputWriter {
     return { xlsx: xlsxPath, csv: csvPath };
   }
 
+  // ── Streaming CSV (low-memory path for large runs) ──────────────────────────
+
+  openCsvStream(csvPath: string): fs.WriteStream {
+    const stream = fs.createWriteStream(csvPath, { encoding: 'utf8' });
+    stream.write(DASHBOARD_COLUMNS.map(c => c.header).join(',') + '\n');
+    return stream;
+  }
+
+  writeCsvRow(stream: fs.WriteStream, row: DashboardRow): void {
+    const periodParsed = dayjs(row.Period, 'DD/MM/YYYY', true);
+    const periodStr = periodParsed.isValid() ? periodParsed.format('YYYY-MM-DD') : row.Period;
+    const line = [
+      this.csvCell(periodStr),
+      this.csvCell(row.State),
+      this.csvCell(row.Facility),
+      this.csvCell(row.DATIMCode),
+      this.csvCell(row.Indicator),
+      this.csvCell(row.Disaggregation),
+      this.csvCell(row.Category),
+      this.csvCell(row.Sex),
+      this.csvText(row.AgeBand),
+      this.csvCell(row.Value),
+      this.csvCell(row.Numerator),
+      this.csvCell(row.Denominator),
+      this.csvCell(row.Target),
+      this.csvCell(row.AchievementPct !== null && row.AchievementPct !== undefined ? `${row.AchievementPct}%` : ''),
+    ].join(',') + '\n';
+    stream.write(line);
+  }
+
+  closeCsvStream(stream: fs.WriteStream): Promise<void> {
+    return new Promise((resolve, reject) => {
+      stream.end();
+      stream.once('finish', resolve);
+      stream.once('error', reject);
+    });
+  }
+
   async writeValidationReport(issues: ValidationIssue[]): Promise<string> {
     const reportPath = path.join(this.outputDir, 'ValidationReport.xlsx');
     const wb = new ExcelJS.Workbook();

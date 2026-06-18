@@ -155,18 +155,25 @@ async function main(): Promise<void> {
   });
 
   await engine.init();
-  const dashboardRows = await engine.process();
 
   // ── Output ─────────────────────────────────────────────────────────────
+  // Stream rows directly to CSV as each indicator finalises — never accumulate
+  // all rows in memory (avoids OOM with 800K+ rows across 93 indicators).
   const writer = new OutputWriter({ outputDir, logger });
-  let csvPath: string | null = null;
+  const csvPath = path.join(outputDir, 'DashboardSummary.csv');
+  const csvStream = writer.openCsvStream(csvPath);
+  let rowCount = 0;
 
-  if (dashboardRows.length > 0) {
-    const { xlsx, csv } = await writer.writeDashboard(dashboardRows);
-    csvPath = csv;
+  await engine.process((row) => {
+    writer.writeCsvRow(csvStream, row);
+    rowCount++;
+  });
+
+  await writer.closeCsvStream(csvStream);
+
+  if (rowCount > 0) {
     logger.info(`\nOutput files:`);
-    logger.info(`  ${xlsx}`);
-    logger.info(`  ${csv}`);
+    logger.info(`  ${csvPath} (${rowCount} rows)`);
   } else {
     logger.warn('No dashboard rows generated — check your workbook and date mode.');
   }
@@ -176,7 +183,7 @@ async function main(): Promise<void> {
   const containerName    = process.env['AZURE_STORAGE_CONTAINER'] ?? 'powerbi-datasource';
   const blobPrefix       = process.env['AZURE_STORAGE_BLOB_PREFIX'] ?? '';
 
-  if (csvPath && connectionString) {
+  if (rowCount > 0 && connectionString) {
     try {
       logger.info(`\nUploading CSV to Azure Blob Storage (${containerName})...`);
       const blobServiceClient = BlobServiceClient.fromConnectionString(connectionString);
@@ -191,7 +198,7 @@ async function main(): Promise<void> {
     } catch (err) {
       logger.error(`  Blob upload failed: ${String(err)}`);
     }
-  } else if (csvPath && !connectionString) {
+  } else if (rowCount > 0 && !connectionString) {
     logger.warn('  AZURE_STORAGE_CONNECTION_STRING not set — skipping blob upload.');
   }
 

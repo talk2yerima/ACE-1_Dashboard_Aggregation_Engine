@@ -318,7 +318,7 @@ export class AggregationEngine {
 
   // ─── Main Entry Point ────────────────────────────────────────────────────
 
-  async process(): Promise<DashboardRow[]> {
+  async process(onRow: (row: DashboardRow) => void): Promise<ProcessingStats> {
     const startTime = Date.now();
     const globalPeriod  = this.dateHelper.getPeriodLabel();
     const groupByDate   = this.isGroupByDateMode();
@@ -683,7 +683,14 @@ export class AggregationEngine {
       }
     }
 
-    const allRows: DashboardRow[] = [];
+    // Only keep in memory the rows needed by formula indicators as inputs.
+    // All other rows are streamed immediately via onRow() to avoid OOM.
+    const formulaInputIndicators = new Set<string>();
+    for (const fd of this.indicatorsConfig.formulaIndicators ?? []) {
+      formulaInputIndicators.add(fd.numerator);
+      formulaInputIndicators.add(fd.denominator);
+    }
+    const formulaInputRows: DashboardRow[] = [];
 
     for (const ind of this.indicatorsConfig.indicators) {
       this.logger.info(`\n── Finalising indicator: ${ind.name} ──`);
@@ -803,22 +810,24 @@ export class AggregationEngine {
       for (const [keyStr, acc] of finalAcc) {
         const kc    = finalComps.get(keyStr)!;
         const value = this.resolveAccValue(acc, ind);
-        allRows.push({
-          Period:        kc['__period__'] ?? globalPeriod,
-          State:         kc['State']      ?? '',
-          Facility:      kc['Facility']   ?? '',
-          DATIMCode:     kc['DATIMCode']  ?? '',
-          Indicator:     ind.name,
+        const row: DashboardRow = {
+          Period:         kc['__period__'] ?? globalPeriod,
+          State:          kc['State']      ?? '',
+          Facility:       kc['Facility']   ?? '',
+          DATIMCode:      kc['DATIMCode']  ?? '',
+          Indicator:      ind.name,
           Disaggregation: ind.disaggregation ?? 'Total',
-          Category:      kc[ind.disaggregation ?? ''] ?? 'Total',
-          Sex:           kc['Sex']        ?? '',
-          AgeBand:       kc['AgeBand']    ?? '',
-          Value:         value,
-          Numerator:     value,
-          Denominator:   null,
-          Target:        null,
+          Category:       kc[ind.disaggregation ?? ''] ?? 'Total',
+          Sex:            kc['Sex']        ?? '',
+          AgeBand:        kc['AgeBand']    ?? '',
+          Value:          value,
+          Numerator:      value,
+          Denominator:    null,
+          Target:         null,
           AchievementPct: null,
-        });
+        };
+        onRow(row);
+        if (formulaInputIndicators.has(ind.name)) formulaInputRows.push(row);
         rowCount++;
       }
 
@@ -832,10 +841,10 @@ export class AggregationEngine {
       this.logger.info('\n── Processing formula indicators ──');
       const formulaRows = this.formulaEngine.calculate(
         this.indicatorsConfig.formulaIndicators,
-        allRows,
+        formulaInputRows,
         globalPeriod,
       );
-      allRows.push(...formulaRows);
+      for (const r of formulaRows) onRow(r);
       this.stats.aggregatedRows += formulaRows.length;
       formulaRows.forEach(r => {
         if (!this.stats.indicatorsProcessed.includes(r.Indicator)) {
@@ -851,7 +860,7 @@ export class AggregationEngine {
     this.logger.info(`  Dashboard rows output:  ${this.stats.aggregatedRows}`);
     this.logger.info(`  Indicators processed:   ${this.stats.indicatorsProcessed.join(', ')}`);
 
-    return allRows;
+    return this.stats;
   }
 
   // ─── Private Helpers ─────────────────────────────────────────────────────
