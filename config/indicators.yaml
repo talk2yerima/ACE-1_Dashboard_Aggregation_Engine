@@ -1514,10 +1514,10 @@ indicators:
   - name: TX_CURR
     description: "TX_CURR — clients currently on treatment"
     source: Sheet1
-    periodColumn: DateofCurrentARTStatus
+    periodColumn: DateOfCurrentARTStatus
     requiredColumns:
       - CurrentARTStatus
-      - DateofCurrentARTStatus
+      - DateOfCurrentARTStatus
       - Facility
       - DATIMCode
       - State
