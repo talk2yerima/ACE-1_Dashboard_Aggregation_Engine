@@ -1,0 +1,67 @@
+
+indicators:
+  - name: EID_WITH_RESULT_WITHIN_60_DAYS
+    description: "EID samples collected within 60 days of delivery with DNA PCR result available"
+    source: CombineMaternal
+    periodColumn: Date of Delivery
+    requiredColumns:
+      - datimCode
+      - Date of Delivery
+      - Date of First DNA PCR Sample collection
+      - Result of first DNA PCR test
+      - Date first DNA PCR result was received
+      - Date of Second DNA PCR test sample collection
+      - Result of second DNA PCR test
+      - Date second DNA PCR result was received
+      - Sex - Child
+      - Age
+
+    derivedColumns:
+      - name: DATIMCode
+        source: datimCode
+
+      - name: Sex
+        source: Sex - Child
+
+      - name: EffectiveDNAPCRSampleCollectionDate
+        ifNotNull: Date of Second DNA PCR test sample collection
+        then: Date of Second DNA PCR test sample collection
+        else: Date of First DNA PCR Sample collection
+
+      - name: EffectiveDNAPCRResult
+        ifNotNull: Date of Second DNA PCR test sample collection
+        then: Result of second DNA PCR test
+        else: Result of first DNA PCR test
+
+      - name: EffectiveDNAPCRResultReceivedDate
+        ifNotNull: Date of Second DNA PCR test sample collection
+        then: Date second DNA PCR result was received
+        else: Date first DNA PCR result was received
+
+    filters:
+      - column: Date of Delivery
+        operator: isNotNull
+
+      - column: EffectiveDNAPCRSampleCollectionDate
+        operator: isNotNull
+
+      - column: EffectiveDNAPCRResult
+        operator: isNotNull
+
+      - column: EffectiveDNAPCRResultReceivedDate
+        operator: isNotNull
+
+      - column: EffectiveDNAPCRSampleCollectionDate
+        operator: dateDiff
+        ref: Date of Delivery
+        value: "<=60"
+
+    groupBy:
+      - DATIMCode
+      - Sex
+      - AgeBand
+
+    aggregation: COUNT
+    disaggregation: Sex
+
+formulaIndicators: []
