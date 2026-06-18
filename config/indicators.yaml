@@ -374,6 +374,36 @@ indicators:
     aggregation: COUNT
     disaggregation: Sex
 
+  - name: Total_Transfer_out
+    description: "Total Transferred Out in FY"
+    source: Sheet1
+    periodColumn: DateOfCurrentARTStatus
+    requiredColumns:
+      - CurrentARTStatus
+      - DateOfCurrentARTStatus
+      - Sex
+      - Age
+      - Facility
+      - DATIMCode
+      - State
+    filters:
+      - column: DateOfCurrentARTStatus
+        operator: dateinRange
+        value: CurrentFY
+      - column: CurrentARTStatus
+        operator: inList
+        value:
+          - "Transferred Out"
+        caseSensitive: false
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
   - name: Total_IIT
     description: "Total IIT in FY"
     source: Sheet1
