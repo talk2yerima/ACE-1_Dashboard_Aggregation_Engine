@@ -29,6 +29,29 @@ indicators:
     aggregation: COUNT
     disaggregation: Sex
 
+  - name: HTS_TST
+    description: "Number of individuals who are tested for HIV"
+    source: Sheet2
+    periodColumn: DateOfHIVTesting
+    requiredColumns:
+      - FinalHIVTestResult
+      - DateOfHIVTesting
+      - Sex
+      - Age
+      - DATIMCode
+    filters:
+      - column: DateOfHIVTesting
+        operator: dateMode
+        value: daily
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
   - name: NEWLY_ENROLLED
     description: "Newly enrolled patients on ART"
     source: Sheet1
