@@ -19,8 +19,12 @@ export interface FilterDef {
     | 'greaterThanOrEqual'
     | 'lessThanOrEqual'
     | 'isNotNull'
-    | 'isNull';
+    | 'isNull'
+    | 'equalsColumn'
+    | 'notEqualsColumn';
   value?: unknown;
+  /** For equalsColumn / notEqualsColumn: the other column name to compare against */
+  valueColumn?: string;
   ref?: string;
   caseSensitive?: boolean;
 }
@@ -165,6 +169,16 @@ export class FilterEngine {
       case 'lessThanOrEqual':
         return this.toNum(raw) <= this.toNum(value);
 
+      case 'equalsColumn': {
+        const other = filter.valueColumn ? row[filter.valueColumn] : undefined;
+        return this.normalizeStr(raw, caseSensitive) === this.normalizeStr(other, caseSensitive);
+      }
+
+      case 'notEqualsColumn': {
+        const other = filter.valueColumn ? row[filter.valueColumn] : undefined;
+        return this.normalizeStr(raw, caseSensitive) !== this.normalizeStr(other, caseSensitive);
+      }
+
       default:
         this.logger.warn(`Unknown filter operator: ${operator}`);
         return true;
@@ -178,6 +192,10 @@ export class FilterEngine {
 
   private toNum(val: unknown): number {
     if (typeof val === 'number') return val;
-    return parseFloat(String(val));
+    const s = String(val ?? '').trim().toLowerCase();
+    // LDL ("Lower than Detection Level") and equivalent text = effectively 0 copies/mL
+    if (s === 'ldl' || s === 'undetectable' || s === 'target not detected' || s === 'tnd') return 0;
+    // Strip thousand separators (e.g. "1,936" → 1936) before parsing
+    return parseFloat(s.replace(/,/g, ''));
   }
 }

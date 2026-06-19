@@ -39,6 +39,19 @@ export interface ValidationIssue {
   message: string;
 }
 
+export interface ComputedColumnDef {
+  name: string;
+  formula: 'dateAdd' | 'ifNotNull';
+  // dateAdd
+  sourceColumn?: string;
+  addColumn?: string;
+  unit?: 'day' | 'week' | 'month' | 'year';
+  // ifNotNull: set to `then` column's value when `ifNotNull` column is non-empty, else `else` column
+  ifNotNull?: string;
+  then?: string;
+  else?: string;
+}
+
 export interface CrossSheetLookup {
   /** Sheet whose column values to collect into a lookup set. */
   fromSheet: string;
@@ -55,9 +68,10 @@ export interface IndicatorDef {
   description?: string;
   source: string;
   requiredColumns: string[];
+  computedColumns?: ComputedColumnDef[];
   filters: FilterDef[];
   anyOf?: FilterDef[];   // OR group: row counted if it passes at least one of these
-  crossSheetLookup?: CrossSheetLookup;  // only count rows whose matchColumn exists in fromSheet
+  crossSheetLookup?: CrossSheetLookup;
   groupBy: string[];
   aggregation: AggregationMethod;
   disaggregation?: string;
@@ -120,10 +134,16 @@ export class AggregationEngine {
   private sheetHeaders!: Record<string, string[]>;
   private categoryRanksConfig!: { categoryRanks: Record<string, string[]> };
 
-  // Built from Sheet1 during streaming; used to enrich HTS rows.
+  // Built from CombinedRADET during streaming; used to enrich HTS rows.
   // Persisted across runs via datim-cache.json so coverage grows over time.
   private datimToFacility = new Map<string, { Facility: string; State: string }>();
   private datimCachePath = '';
+
+  // Maps the UUID suffix of compound values ("{facilityDATIM}_{uuid}") → facilityDATIM.
+  // ExcelJS streaming sometimes returns just the UUID when its shared-string cache
+  // misses the index; this persistent map lets us recover the DATIM in later runs.
+  private compoundSuffixMap = new Map<string, string>();
+  private suffixCachePath = '';
 
   public validationIssues: ValidationIssue[] = [];
   public stats: ProcessingStats = {
@@ -173,6 +193,9 @@ export class AggregationEngine {
 
     this.datimCachePath = path.join(this.options.configDir, 'datim-cache.json');
     this.loadDatimCache();
+
+    this.suffixCachePath = path.join(this.options.configDir, 'compound-suffix-cache.json');
+    this.loadSuffixCache();
 
     const ranksPath = path.join(this.options.configDir, 'categoryRanks.yaml');
     if (fs.existsSync(ranksPath)) {
@@ -242,13 +265,14 @@ export class AggregationEngine {
       return null;
     };
 
-    if (sheetName === 'Sheet1') {
+    if (sheetName === 'CombinedRADET') {
       // LGA columns are excluded: they embed compound UIDs from OTHER facilities
       // (e.g. the LGA a patient transferred from) and would produce wrong matches.
       const skipCols = new Set(['LGA', 'LGAOfResidence']);
 
       // Check col5 (DATIMCode) first — it is the authoritative facility identifier.
-      const col5 = tryVal(String(record['DATIMCode'] ?? '').trim());
+      const col5Raw = String(record['DATIMCode'] ?? '').trim();
+      const col5 = tryVal(col5Raw);
       if (col5) return col5;
 
       // Scan all remaining columns as fallbacks (handles ExcelJS shared-string
@@ -258,10 +282,28 @@ export class AggregationEngine {
         const found = tryVal(String(val ?? '').trim());
         if (found) return found;
       }
+
+      // Last resort for RADET: col5 might be a UUID that was previously seen as
+      // a compound suffix (e.g. "facilityDATIM_patientUUID" → patientUUID).
+      // Only try col5 to avoid false positives from shared option-concept UUIDs
+      // that may appear in other columns.
+      if (col5Raw && !col5Raw.includes('_')) {
+        const suffixMapped = this.compoundSuffixMap.get(col5Raw);
+        if (suffixMapped) return suffixMapped;
+      }
     } else {
       for (const rawVal of Object.values(record)) {
         const found = tryVal(String(rawVal ?? '').trim());
         if (found) return found;
+      }
+      // Last resort for HTS: any column value might be a UUID that was seen
+      // as a compound suffix in a previous run. All columns are checked because
+      // HTS is the cross-sheet sheet with fewer ambiguity risks.
+      for (const rawVal of Object.values(record)) {
+        const str = String(rawVal ?? '').trim();
+        if (!str) continue;
+        const suffixMapped = this.compoundSuffixMap.get(str);
+        if (suffixMapped) return suffixMapped;
       }
     }
     return null;
@@ -281,7 +323,7 @@ export class AggregationEngine {
 
   // ─── Main Entry Point ────────────────────────────────────────────────────
 
-  async process(): Promise<DashboardRow[]> {
+  async process(onRow: (row: DashboardRow) => void): Promise<ProcessingStats> {
     const startTime = Date.now();
     const globalPeriod  = this.dateHelper.getPeriodLabel();
     const groupByDate   = this.isGroupByDateMode();
@@ -315,27 +357,27 @@ export class AggregationEngine {
       const catFilters = new Set(
         ind.filters
           .filter(f => f.operator !== 'dateMode')
-          .map(f => f.column),
+          .flatMap(f => [f.column, ...(f.ref ? [f.ref] : [])]),
       );
-      // Also collect anyOf columns
-      for (const f of (ind.anyOf ?? [])) catFilters.add(f.column);
-      // Also capture ref columns used by dateDiff so they end up in rawComponents
-      for (const f of [...ind.filters, ...(ind.anyOf ?? [])]) {
+      // Also collect anyOf columns and their ref columns
+      for (const f of (ind.anyOf ?? [])) {
+        catFilters.add(f.column);
         if (f.ref) catFilters.add(f.ref);
       }
+      // Track the matchColumn for cross-sheet lookup
+      if (ind.crossSheetLookup) catFilters.add(ind.crossSheetLookup.matchColumn);
       indFilterCols.set(ind.name, catFilters);
-    }
-
-    // Cross-sheet lookup sets: key = indicator name → Set of collected values
-    // Each indicator gets its own set so lookupFilters can differ per indicator.
-    const crossSheetSets = new Map<string, Set<string>>();
-    for (const ind of this.indicatorsConfig.indicators) {
-      if (ind.crossSheetLookup) crossSheetSets.set(ind.name, new Set());
     }
 
     // rawAccMap: indName → rawKeyStr → RawGroupEntry
     const rawAccMap = new Map<string, Map<string, RawGroupEntry>>();
     for (const ind of this.indicatorsConfig.indicators) rawAccMap.set(ind.name, new Map());
+
+    // crossSheetSets: indName → Set of values collected from fromSheet for cross-sheet lookup
+    const crossSheetSets = new Map<string, Set<string>>();
+    for (const ind of this.indicatorsConfig.indicators) {
+      if (ind.crossSheetLookup) crossSheetSets.set(ind.name, new Set());
+    }
 
     // Org-unit raw data: col1-prefix → { stateRaw, lgaRaw, facilityRaw }
     const orgUnitSeen = new Map<string, { stateRaw: string; lgaRaw: string; facilityRaw: string }>();
@@ -346,15 +388,56 @@ export class AggregationEngine {
 
     this.logger.info('AggregationEngine: single streaming pass (calibration + processing)…');
 
+    // Pre-read the shared strings table from the raw ZIP before starting ExcelJS.
+    // ACE-1_Combined_RADET files store all 5 worksheets BEFORE xl/sharedStrings.xml
+    // in the ZIP, so ExcelJS sometimes only partially loads the 1.3M-entry table,
+    // leaving high-index DATIM codes unresolved. We pre-read the full table and
+    // inject it directly, bypassing ExcelJS's incremental parser.
+    // Files without sharedStrings (e.g. plain RADET.xlsx with inline strings) are
+    // handled gracefully — preloadedStrings is empty and the patch is skipped.
+    // styles: 'ignore' prevents a crash on real RADET files where ExcelJS cannot
+    // resolve styles before processing worksheets. Date values in RADET are stored
+    // as text strings (dd/MM/yyyy) so style-based date detection is not required.
+    //
+    // xl/_rels/workbook.xml.rels is also stored AFTER the worksheet files in the ZIP,
+    // so ExcelJS cannot map internal filenames (sheet1, sheet2…) to visible tab names
+    // (CombinedRADET, CombinedHTS…) when it emits worksheet events. We pre-read both
+    // workbook.xml and workbook.xml.rels to build our own filename→tabName map.
+    const [preloadedStrings, sheetNameMap] = await Promise.all([
+      this.preReadSharedStrings(this.options.workbookPath),
+      this.preReadSheetNames(this.options.workbookPath),
+    ]);
     const reader = new ExcelJS.stream.xlsx.WorkbookReader(
       this.options.workbookPath,
-      { sharedStrings: 'cache', styles: 'cache', hyperlinks: 'ignore', worksheets: 'emit' },
+      { sharedStrings: 'cache', styles: 'ignore', hyperlinks: 'ignore', worksheets: 'emit' },
     );
+    if (preloadedStrings.length > 0) {
+      // Capture reader reference for closure (avoids 'this' binding issues in patched method)
+      const readerRef = reader as unknown as Record<string, unknown>;
+      const stringsRef = preloadedStrings;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (reader as any)._parseSharedStrings = async function*(entry: any) {
+        readerRef['sharedStrings'] = stringsRef;
+        // Drain the ZIP entry so the stream can advance to the next entry
+        await new Promise<void>(resolve => {
+          entry.on('end', () => resolve());
+          entry.on('error', () => resolve());
+          entry.resume();
+        });
+      };
+    }
     reader.read();
 
     for await (const worksheetReader of reader) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const sheetName: string = (worksheetReader as any).name;
+      const rawSheetName: string = (worksheetReader as any).name;
+      // Translate ExcelJS's internal filename (e.g. "sheet1") to the actual tab name
+      // (e.g. "CombinedRADET"). Falls back to rawSheetName when the map is empty or
+      // ExcelJS already resolved the name correctly.
+      // ExcelJS generates "Sheet1", "Sheet2"… when it can't resolve tab names from
+      // workbook.xml.rels. Our preReadSheetNames map uses lowercase keys ("sheet1"…)
+      // matching the ZIP filenames. Normalise to lowercase for the lookup.
+      const sheetName: string = sheetNameMap.get(rawSheetName.toLowerCase()) ?? rawSheetName;
       seenSheets.add(sheetName);
 
       const indicators = bySheet.get(sheetName);
@@ -395,23 +478,11 @@ export class AggregationEngine {
 
         this.stats.totalRows++;
 
-        // ── Populate cross-sheet lookup sets ─────────────────────────────────
-        for (const [indName, set] of crossSheetSets) {
-          const lookup = this.indicatorsConfig.indicators.find(i => i.name === indName)!.crossSheetLookup!;
-          if (lookup.fromSheet !== sheetName) continue;
-
-          if (lookup.lookupFilters && lookup.lookupFilters.length > 0) {
-            // Normalize compound UIDs before filter evaluation so plain
-            // value comparisons (e.g. "Active") work on DHIS2-coded fields.
-            const normRecord: Record<string, unknown> = {};
-            for (const [k, v] of Object.entries(record)) {
-              normRecord[k] = this.normalizeOptionValue(String(v ?? '').trim());
-            }
-            if (!this.filterEngine.passesAll(normRecord, lookup.lookupFilters)) continue;
+        // ── Apply computed columns for indicators on this sheet ──────────────
+        for (const ind of indicators) {
+          if (ind.computedColumns?.length) {
+            this.applyComputedColumns(record, ind.computedColumns);
           }
-
-          const val = String(record[lookup.fromColumn] ?? '').trim();
-          if (val) set.add(val);
         }
 
         // ── Build frequency maps (suffix-normalised) ─────────────────────────
@@ -427,8 +498,26 @@ export class AggregationEngine {
         // ── Extract facility DATIM (scans col1/col4/col5 for RADET, all cols for HTS) ─
         const rowDatim = this.findFacilityDatim(record, sheetName);
 
+        // ── Build compound-suffix cache (Facility + DATIMCode columns only) ────────
+        // Whenever ExcelJS correctly reads a compound "{facilityDATIM}_{uuid}" in a
+        // facility-specific column, persist "uuid → facilityDATIM".  We restrict to
+        // the Facility (col4) and DATIMCode (col5) columns only — other categorical
+        // columns (Sex, ARTStatus, LGA, etc.) use SHARED option-concept UUIDs that
+        // are identical across many facilities and would create false attributions.
+        for (const col of ['Facility', 'DATIMCode'] as const) {
+          const rawVal = record[col];
+          const str = String(rawVal ?? '').trim();
+          const datim = this.extractDatimFromCompound(str);
+          if (datim && this.orgUnitHelper.lookupByDATIM(datim)) {
+            const suffix = str.slice(12); // 11 DATIM chars + 1 underscore
+            if (suffix && !this.compoundSuffixMap.has(suffix)) {
+              this.compoundSuffixMap.set(suffix, datim);
+            }
+          }
+        }
+
         // Populate RADET cross-sheet lookup (used for HTS facility info)
-        if (sheetName === 'Sheet1' && rowDatim && !this.datimToFacility.has(rowDatim)) {
+        if (sheetName === 'CombinedRADET' && rowDatim && !this.datimToFacility.has(rowDatim)) {
           const ou = this.orgUnitHelper.lookupByDATIM(rowDatim);
           this.datimToFacility.set(rowDatim, {
             Facility: ou?.facility ?? '',
@@ -437,12 +526,25 @@ export class AggregationEngine {
         }
 
         // Collect raw org-unit data for the CSV diagnostic output
-        if (sheetName === 'Sheet1' && rowDatim && !orgUnitSeen.has(rowDatim)) {
+        if (sheetName === 'CombinedRADET' && rowDatim && !orgUnitSeen.has(rowDatim)) {
           orgUnitSeen.set(rowDatim, {
             stateRaw:    String(record['State']    ?? '').trim(),
             lgaRaw:      String(record['LGA']      ?? '').trim(),
             facilityRaw: String(record['Facility'] ?? '').trim(),
           });
+        }
+
+        // ── Populate cross-sheet lookup sets ──────────────────────────────────
+        for (const [indName, set] of crossSheetSets) {
+          const lookup = this.indicatorsConfig.indicators.find(i => i.name === indName)!.crossSheetLookup!;
+          if (lookup.fromSheet !== sheetName) continue;
+          if (lookup.lookupFilters && lookup.lookupFilters.length > 0) {
+            const normRecord: Record<string, unknown> = {};
+            for (const [k, v] of Object.entries(record)) normRecord[k] = this.normalizeOptionValue(String(v ?? '').trim());
+            if (!this.filterEngine.passesAll(normRecord, lookup.lookupFilters)) continue;
+          }
+          const val = String(record[lookup.fromColumn] ?? '').trim();
+          if (val) set.add(val);
         }
 
         // ── Per-indicator accumulation ─────────────────────────────────────────
@@ -461,7 +563,7 @@ export class AggregationEngine {
 
           // ── Cross-sheet lookup gate ───────────────────────────────────────────
           if (ind.crossSheetLookup) {
-            const set      = crossSheetSets.get(ind.name);
+            const set = crossSheetSets.get(ind.name);
             const matchVal = String(record[ind.crossSheetLookup.matchColumn] ?? '').trim();
             if (!set || !matchVal || !set.has(matchVal)) continue;
           }
@@ -481,11 +583,15 @@ export class AggregationEngine {
           const rawComponents: Record<string, string> = {
             __period__: rowPeriod,
             __datim__:  rowDatim ?? '',
-            // Non-RADET sheets (e.g. HTS): the DATIMCode column IS the facility
-            // identifier.  Store the raw value so post-processing can display it
-            // even when it cannot be resolved to an orgUnit name.
-            __rawDatimCode__: sheetName !== 'Sheet1'
-              ? this.normalizeOptionValue(String(record['DATIMCode'] ?? '').trim())
+            // Non-RADET sheets (e.g. HTS): DATIMCode column is the facility
+            // identifier. Extract the 11-char DATIM prefix from compound values
+            // (e.g. "JPBcTpp6XUu_uuid" → "JPBcTpp6XUu"). normalizeOptionValue
+            // strips the prefix and keeps the UUID suffix — wrong for this field.
+            __rawDatimCode__: sheetName !== 'CombinedRADET'
+              ? (() => {
+                  const raw = String(record['DATIMCode'] ?? '').trim();
+                  return this.extractDatimFromCompound(raw) ?? raw;
+                })()
               : '',
           };
 
@@ -549,9 +655,26 @@ export class AggregationEngine {
       dynamicMappings.set(col, colMap);
     }
 
+    // Log which orgUnits.yaml DATIMs were never seen in this run
+    const allKnownDatims = this.orgUnitHelper.getAllDatimCodes();
+    const neverSeen = allKnownDatims.filter(d => !orgUnitSeen.has(d));
+    if (neverSeen.length > 0) {
+      this.logger.warn(
+        `  ${neverSeen.length} facilities from orgUnits.yaml had no rows resolved in this run ` +
+        `(may have no data in this period, or ExcelJS cache miss for all their rows):`,
+      );
+      for (const d of neverSeen) {
+        const ou = this.orgUnitHelper.lookupByDATIM(d);
+        this.logger.warn(`    - ${ou?.facility ?? d} (${d})`);
+      }
+    } else {
+      this.logger.info('  All 74 facilities resolved in this run.');
+    }
+
     // Write diagnostic CSV so operators can verify / fill in missing org-unit names
     this.writeOrgUnitsRawCsv(orgUnitSeen);
     this.saveDatimCache();
+    this.saveSuffixCache();
 
     // ── Post-process: map raw keys → labels, apply categorical filters ────────
 
@@ -565,7 +688,14 @@ export class AggregationEngine {
       }
     }
 
-    const allRows: DashboardRow[] = [];
+    // Only keep in memory the rows needed by formula indicators as inputs.
+    // All other rows are streamed immediately via onRow() to avoid OOM.
+    const formulaInputIndicators = new Set<string>();
+    for (const fd of this.indicatorsConfig.formulaIndicators ?? []) {
+      formulaInputIndicators.add(fd.numerator);
+      formulaInputIndicators.add(fd.denominator);
+    }
+    const formulaInputRows: DashboardRow[] = [];
 
     for (const ind of this.indicatorsConfig.indicators) {
       this.logger.info(`\n── Finalising indicator: ${ind.name} ──`);
@@ -577,8 +707,8 @@ export class AggregationEngine {
       }
 
       // Categorical filters that apply to mapped values (exclude dateMode)
-      const catFilters    = ind.filters.filter(f => f.operator !== 'dateMode');
-      const anyOfFilters  = ind.anyOf ?? [];
+      const catFilters   = ind.filters.filter(f => f.operator !== 'dateMode');
+      const anyOfFilters = ind.anyOf ?? [];
 
       // Final accumulator after mapping + re-grouping
       const finalAcc  = new Map<string, StreamAcc>();
@@ -628,13 +758,15 @@ export class AggregationEngine {
           mapped['State']    = '';
           mapped['Facility'] = '';
           mapped['LGA']      = '';
-          // For non-RADET sheets the DATIMCode column is the facility identifier
-          // (not a patient ID), so show it as-is.  For RADET, col5 is a patient
-          // enrollment number — hide it.
+          // Only use __rawDatimCode__ if it is a proper 11-char DATIM UID.
+          // UUIDs (36-char hex) must never appear as DATIMCode in the output.
           const rawDatimCode = rawComponents['__rawDatimCode__'];
-          mapped['DATIMCode'] = rawDatimCode || '';
-          // If the raw DATIMCode resolves via the RADET cross-sheet map, pick up names
-          if (rawDatimCode) {
+          const isValidDatim = !!rawDatimCode &&
+            rawDatimCode.length === 11 &&
+            /^[A-Za-z][A-Za-z0-9]{10}$/.test(rawDatimCode);
+          mapped['DATIMCode'] = isValidDatim ? rawDatimCode : '';
+          // If the extracted DATIM resolves via the RADET cross-sheet map, pick up names
+          if (isValidDatim) {
             const rInfo = this.datimToFacility.get(rawDatimCode);
             if (rInfo) {
               mapped['Facility'] = rInfo.Facility;
@@ -683,22 +815,24 @@ export class AggregationEngine {
       for (const [keyStr, acc] of finalAcc) {
         const kc    = finalComps.get(keyStr)!;
         const value = this.resolveAccValue(acc, ind);
-        allRows.push({
-          Period:        kc['__period__'] ?? globalPeriod,
-          State:         kc['State']      ?? '',
-          Facility:      kc['Facility']   ?? '',
-          DATIMCode:     kc['DATIMCode']  ?? '',
-          Indicator:     ind.name,
+        const row: DashboardRow = {
+          Period:         kc['__period__'] ?? globalPeriod,
+          State:          kc['State']      ?? '',
+          Facility:       kc['Facility']   ?? '',
+          DATIMCode:      kc['DATIMCode']  ?? '',
+          Indicator:      ind.name,
           Disaggregation: ind.disaggregation ?? 'Total',
-          Category:      kc[ind.disaggregation ?? ''] ?? 'Total',
-          Sex:           kc['Sex']        ?? '',
-          AgeBand:       kc['AgeBand']    ?? '',
-          Value:         value,
-          Numerator:     value,
-          Denominator:   null,
-          Target:        null,
+          Category:       kc[ind.disaggregation ?? ''] ?? 'Total',
+          Sex:            kc['Sex']        ?? '',
+          AgeBand:        kc['AgeBand']    ?? '',
+          Value:          value,
+          Numerator:      value,
+          Denominator:    null,
+          Target:         null,
           AchievementPct: null,
-        });
+        };
+        onRow(row);
+        if (formulaInputIndicators.has(ind.name)) formulaInputRows.push(row);
         rowCount++;
       }
 
@@ -712,10 +846,10 @@ export class AggregationEngine {
       this.logger.info('\n── Processing formula indicators ──');
       const formulaRows = this.formulaEngine.calculate(
         this.indicatorsConfig.formulaIndicators,
-        allRows,
+        formulaInputRows,
         globalPeriod,
       );
-      allRows.push(...formulaRows);
+      for (const r of formulaRows) onRow(r);
       this.stats.aggregatedRows += formulaRows.length;
       formulaRows.forEach(r => {
         if (!this.stats.indicatorsProcessed.includes(r.Indicator)) {
@@ -731,10 +865,31 @@ export class AggregationEngine {
     this.logger.info(`  Dashboard rows output:  ${this.stats.aggregatedRows}`);
     this.logger.info(`  Indicators processed:   ${this.stats.indicatorsProcessed.join(', ')}`);
 
-    return allRows;
+    return this.stats;
   }
 
   // ─── Private Helpers ─────────────────────────────────────────────────────
+
+  /** Adds derived date fields to a record using dateAdd formula. */
+  private applyComputedColumns(
+    record: Record<string, unknown>,
+    defs: ComputedColumnDef[],
+  ): void {
+    for (const def of defs) {
+      if (def.formula === 'dateAdd') {
+        const baseDate = this.dateHelper.parse(record[def.sourceColumn!]);
+        if (!baseDate) continue;
+        const addRaw = record[def.addColumn!];
+        const addNum = typeof addRaw === 'number' ? addRaw : parseFloat(String(addRaw ?? ''));
+        if (isNaN(addNum) || addNum <= 0) continue;
+        record[def.name] = baseDate.add(addNum, def.unit!).toDate();
+      } else if (def.formula === 'ifNotNull') {
+        const checkVal = record[def.ifNotNull!];
+        const hasValue = checkVal !== null && checkVal !== undefined && String(checkVal).trim() !== '';
+        record[def.name] = hasValue ? record[def.then!] : record[def.else!];
+      }
+    }
+  }
 
   private resolveAccValue(acc: StreamAcc, ind: IndicatorDef): number {
     switch (ind.aggregation) {
@@ -776,6 +931,136 @@ export class AggregationEngine {
   ): void {
     this.validationIssues.push({ sheet, row, column, severity, message });
     if (severity === 'ERROR') this.stats.warnings.push(message);
+  }
+
+  // ─── Sheet-name pre-reader ────────────────────────────────────────────────
+  // xl/_rels/workbook.xml.rels is stored AFTER the worksheet files in the ZIP.
+  // ExcelJS streaming therefore cannot map internal filenames (sheet1…sheet5) to
+  // visible tab names (CombinedRADET, CombinedHTS…) when it emits worksheet events.
+  // We pre-read both workbook.xml and workbook.xml.rels to build that map ourselves.
+
+  private async preReadSheetNames(xlsxPath: string): Promise<Map<string, string>> {
+    // Returns: internal filename WITHOUT extension (e.g. "sheet1") → tab name (e.g. "CombinedRADET")
+    const nameMap = new Map<string, string>();
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const unzipper = require('unzipper') as {
+        Open: {
+          file(p: string): Promise<{
+            files: Array<{ path: string; buffer(): Promise<Buffer> }>;
+          }>;
+        };
+      };
+      const dir = await unzipper.Open.file(xlsxPath);
+
+      const wbFile   = dir.files.find(f => f.path === 'xl/workbook.xml');
+      const relsFile = dir.files.find(f => f.path === 'xl/_rels/workbook.xml.rels');
+      if (!wbFile || !relsFile) {
+        this.logger.warn('AggregationEngine: workbook.xml or workbook.xml.rels not found — sheet names may be wrong');
+        return nameMap;
+      }
+
+      const [wbXml, relsXml] = await Promise.all([
+        wbFile.buffer().then(b => b.toString('utf8')),
+        relsFile.buffer().then(b => b.toString('utf8')),
+      ]);
+
+      // workbook.xml: build r:id → tab name
+      const ridToName = new Map<string, string>();
+      const sheetRe = /<[^>]*?sheet\s[^>]*/g;
+      let m: RegExpExecArray | null;
+      while ((m = sheetRe.exec(wbXml)) !== null) {
+        const elem = m[0];
+        const nameMatch = elem.match(/\bname="([^"]+)"/);
+        const ridMatch  = elem.match(/\br:id="([^"]+)"/);
+        if (nameMatch && ridMatch) ridToName.set(ridMatch[1], nameMatch[1]);
+      }
+
+      // workbook.xml.rels: r:id → internal filename (without extension)
+      const relRe = /<Relationship\s[^>]*/g;
+      while ((m = relRe.exec(relsXml)) !== null) {
+        const elem = m[0];
+        if (!elem.toLowerCase().includes('worksheet')) continue;
+        const targetMatch = elem.match(/\bTarget="([^"]+)"/);
+        const idMatch     = elem.match(/\bId="([^"]+)"/);
+        if (!targetMatch || !idMatch) continue;
+        const parts    = targetMatch[1].split('/');
+        const filename = parts[parts.length - 1].replace('.xml', '');
+        const tabName  = ridToName.get(idMatch[1]);
+        if (tabName) nameMap.set(filename, tabName);
+      }
+
+      this.logger.info(
+        `AggregationEngine: pre-loaded ${nameMap.size} sheet name mappings ` +
+        `(${[...nameMap.entries()].map(([k, v]) => `${k}→${v}`).join(', ')})`,
+      );
+    } catch (err) {
+      this.logger.warn(`AggregationEngine: failed to pre-read sheet names (${String(err)})`);
+    }
+    return nameMap;
+  }
+
+  // ─── Shared-string pre-reader ────────────────────────────────────────────
+  // Reads xl/sharedStrings.xml directly from the XLSX ZIP using unzipper (already
+  // a transitive dependency of ExcelJS).  Returns a plain string array whose indices
+  // match the shared-string references in the worksheet XML.
+
+  private async preReadSharedStrings(xlsxPath: string): Promise<string[]> {
+    this.logger.info('AggregationEngine: pre-reading xl/sharedStrings.xml from ZIP…');
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const unzipper = require('unzipper') as {
+        Open: {
+          file(p: string): Promise<{
+            files: Array<{ path: string; buffer(): Promise<Buffer> }>;
+          }>;
+        };
+      };
+      const dir = await unzipper.Open.file(xlsxPath);
+      const ssFile = dir.files.find(f => f.path === 'xl/sharedStrings.xml');
+      if (!ssFile) {
+        this.logger.warn('AggregationEngine: xl/sharedStrings.xml not found in ZIP');
+        return [];
+      }
+
+      const xml = (await ssFile.buffer()).toString('utf8');
+      const strings: string[] = [];
+      let pos = 0;
+
+      while (pos < xml.length) {
+        const siStart = xml.indexOf('<si', pos);
+        if (siStart < 0) break;
+        const siEnd = xml.indexOf('</si>', siStart);
+        if (siEnd < 0) break;
+
+        // Extract all <t>…</t> text runs within this <si> element (handles both
+        // plain-text and rich-text formats; rich-text runs are concatenated).
+        const siContent = xml.substring(siStart, siEnd);
+        let text = '';
+        const tRe = /<t[^>]*>([^<]*)<\/t>/g;
+        let m: RegExpExecArray | null;
+        while ((m = tRe.exec(siContent)) !== null) {
+          text += m[1]
+            .replace(/&amp;/g, '&')
+            .replace(/&lt;/g, '<')
+            .replace(/&gt;/g, '>')
+            .replace(/&apos;/g, "'")
+            .replace(/&quot;/g, '"');
+        }
+        strings.push(text);
+        pos = siEnd + 5;
+      }
+
+      this.logger.info(
+        `AggregationEngine: pre-loaded ${strings.length.toLocaleString()} shared strings`,
+      );
+      return strings;
+    } catch (err) {
+      this.logger.warn(
+        `AggregationEngine: failed to pre-read shared strings (${String(err)}); falling back to ExcelJS default`,
+      );
+      return [];
+    }
   }
 
   // ─── DATIM discovery cache ────────────────────────────────────────────────
@@ -823,6 +1108,49 @@ export class AggregationEngine {
     if (added > 0) {
       this.logger.info(
         `AggregationEngine: saved ${added} new DATIM entries to cache (${Object.keys(existing).length} total)`,
+      );
+    }
+  }
+
+  private loadSuffixCache(): void {
+    try {
+      const raw = fs.readFileSync(this.suffixCachePath, 'utf8');
+      const cache = JSON.parse(raw) as Record<string, string>;
+      let loaded = 0;
+      for (const [suffix, datim] of Object.entries(cache)) {
+        if (!this.compoundSuffixMap.has(suffix)) {
+          this.compoundSuffixMap.set(suffix, datim);
+          loaded++;
+        }
+      }
+      if (loaded > 0) {
+        this.logger.info(
+          `AggregationEngine: loaded ${loaded} compound-suffix entries from cache (${Object.keys(cache).length} total)`,
+        );
+      }
+    } catch {
+      // Cache not yet created — first run
+    }
+  }
+
+  private saveSuffixCache(): void {
+    let existing: Record<string, string> = {};
+    try {
+      existing = JSON.parse(fs.readFileSync(this.suffixCachePath, 'utf8'));
+    } catch { /* new file */ }
+
+    let added = 0;
+    for (const [suffix, datim] of this.compoundSuffixMap.entries()) {
+      if (!existing[suffix]) {
+        existing[suffix] = datim;
+        added++;
+      }
+    }
+
+    fs.writeFileSync(this.suffixCachePath, JSON.stringify(existing, null, 2), 'utf8');
+    if (added > 0) {
+      this.logger.info(
+        `AggregationEngine: saved ${added} new compound-suffix entries (${Object.keys(existing).length} total)`,
       );
     }
   }
