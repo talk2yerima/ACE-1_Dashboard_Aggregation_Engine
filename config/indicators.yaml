@@ -3528,6 +3528,60 @@ indicators:
     aggregation: COUNT
     disaggregation: Sex
 
+  - name: EID_WITH_RESULT_WITHIN_60_DAYS
+    description: "EID samples collected within 60 days of delivery with DNA PCR result available"
+    source: CombineMaternal
+    periodColumn: Date of Delivery
+    requiredColumns:
+      - DATIMCode
+      - Date of Delivery
+      - Date of First DNA PCR Sample collection
+      - Result of first DNA PCR test
+      - Date first DNA PCR result was received
+      - Date of Second DNA PCR test sample collection
+      - Result of second DNA PCR test
+      - Date second DNA PCR result was received
+      - Sex
+      - Age
+    computedColumns:
+      - name: EffectiveDNAPCRSampleDate
+        formula: ifNotNull
+        ifNotNull: Date of Second DNA PCR test sample collection
+        then: Date of Second DNA PCR test sample collection
+        else: Date of First DNA PCR Sample collection
+      - name: EffectiveDNAPCRResult
+        formula: ifNotNull
+        ifNotNull: Date of Second DNA PCR test sample collection
+        then: Result of second DNA PCR test
+        else: Result of first DNA PCR test
+      - name: EffectiveDNAPCRResultDate
+        formula: ifNotNull
+        ifNotNull: Date of Second DNA PCR test sample collection
+        then: Date second DNA PCR result was received
+        else: Date first DNA PCR result was received
+    filters:
+      - column: Date of Delivery
+        operator: dateMode
+        value: DAILY
+      - column: EffectiveDNAPCRSampleDate
+        operator: isNotNull
+      - column: EffectiveDNAPCRResult
+        operator: isNotNull
+      - column: EffectiveDNAPCRResultDate
+        operator: isNotNull
+      - column: EffectiveDNAPCRSampleDate
+        operator: dateDiff
+        ref: Date of Delivery
+        value: "<=60"
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
 # Formula-based indicators (calculated from other indicators)
 formulaIndicators:
 

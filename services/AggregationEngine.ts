@@ -41,10 +41,15 @@ export interface ValidationIssue {
 
 export interface ComputedColumnDef {
   name: string;
-  formula: 'dateAdd';
-  sourceColumn: string;
-  addColumn: string;
-  unit: 'day' | 'week' | 'month' | 'year';
+  formula: 'dateAdd' | 'ifNotNull';
+  // dateAdd
+  sourceColumn?: string;
+  addColumn?: string;
+  unit?: 'day' | 'week' | 'month' | 'year';
+  // ifNotNull: set to `then` column's value when `ifNotNull` column is non-empty, else `else` column
+  ifNotNull?: string;
+  then?: string;
+  else?: string;
 }
 
 export interface CrossSheetLookup {
@@ -871,13 +876,18 @@ export class AggregationEngine {
     defs: ComputedColumnDef[],
   ): void {
     for (const def of defs) {
-      if (def.formula !== 'dateAdd') continue;
-      const baseDate = this.dateHelper.parse(record[def.sourceColumn]);
-      if (!baseDate) continue;
-      const addRaw = record[def.addColumn];
-      const addNum = typeof addRaw === 'number' ? addRaw : parseFloat(String(addRaw ?? ''));
-      if (isNaN(addNum) || addNum <= 0) continue;
-      record[def.name] = baseDate.add(addNum, def.unit).toDate();
+      if (def.formula === 'dateAdd') {
+        const baseDate = this.dateHelper.parse(record[def.sourceColumn!]);
+        if (!baseDate) continue;
+        const addRaw = record[def.addColumn!];
+        const addNum = typeof addRaw === 'number' ? addRaw : parseFloat(String(addRaw ?? ''));
+        if (isNaN(addNum) || addNum <= 0) continue;
+        record[def.name] = baseDate.add(addNum, def.unit!).toDate();
+      } else if (def.formula === 'ifNotNull') {
+        const checkVal = record[def.ifNotNull!];
+        const hasValue = checkVal !== null && checkVal !== undefined && String(checkVal).trim() !== '';
+        record[def.name] = hasValue ? record[def.then!] : record[def.else!];
+      }
     }
   }
 
