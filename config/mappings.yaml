@@ -25,12 +25,16 @@ mappings:
 
   CurrentARTStatus:
     Active: "Active"
+    "Active Restart": "Active Restart"
     LTFU: "Lost to Follow-Up"
     "Lost to Follow Up": "Lost to Follow-Up"
     TO: "Transferred Out"
     "Transfer Out": "Transferred Out"
     ST: "Stopped Treatment"
     "Stop Treatment": "Stopped Treatment"
+    "STOPPED TREATMENT": "Stopped Treatment"
+    "Treatment Stop": "Stopped Treatment"
+    "Invalid - Duplicates": "Invalid"
     Dead: "Dead"
     Inactive: "Inactive"
 

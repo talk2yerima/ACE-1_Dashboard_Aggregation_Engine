@@ -1,19 +1,75 @@
 {
+  "JPBcTpp6XUu": {
+    "Facility": "Abubakar Barde First Referral Hospital",
+    "State": "Taraba"
+  },
   "W387n0fbylW": {
     "Facility": "Adamawa Hospital",
     "State": "Adamawa"
   },
-  "Pjak5oARJBf": {
-    "Facility": "Borrong General Hospital",
-    "State": "Adamawa"
+  "RWQP4pGxyYS": {
+    "Facility": "Askira General Hospital",
+    "State": "Borno"
+  },
+  "gF8UahvIXw9": {
+    "Facility": "Biu General Hospital",
+    "State": "Borno"
   },
   "RoxOslFYbmA": {
     "Facility": "Boshong Clinic and Maternity",
     "State": "Adamawa"
   },
-  "KrHj7Ycvctj": {
-    "Facility": "Fufore Cottage Hospital",
+  "VZCEov8JZIe": {
+    "Facility": "Briyel General Hospital",
+    "State": "Borno"
+  },
+  "q1D4GdFPtqJ": {
+    "Facility": "Wukari Christian Reformed Church Of Nigeria Aids Action Committee",
+    "State": "Taraba"
+  },
+  "x7TBWFDy1GZ": {
+    "Facility": "Gulak Cottage Hospital",
     "State": "Adamawa"
+  },
+  "Aocjg00w77E": {
+    "Facility": "Jalingo Federal Medical Centre",
+    "State": "Taraba"
+  },
+  "o1xyfiaFzDG": {
+    "Facility": "FHI360 Clinic, Banki IDP Camp",
+    "State": "Borno"
+  },
+  "OQYeCajbh5G": {
+    "Facility": "Fika General Hospital",
+    "State": "Yobe"
+  },
+  "wSzsuzrAmU1": {
+    "Facility": "Donga First Referral Hospital",
+    "State": "Taraba"
+  },
+  "DVlcYRf680L": {
+    "Facility": "Baissa First Referral Hospital",
+    "State": "Taraba"
+  },
+  "DgTi7GSbUAE": {
+    "Facility": "Ibi First Referral Hospital",
+    "State": "Taraba"
+  },
+  "dlzwTad81iz": {
+    "Facility": "Lau First Referral Hospital",
+    "State": "Taraba"
+  },
+  "KGNkYub5Oxq": {
+    "Facility": "Mutum Biyu First Referral Hospital",
+    "State": "Taraba"
+  },
+  "zZXDNWVezMV": {
+    "Facility": "Serti First Referral Hospital",
+    "State": "Taraba"
+  },
+  "IvofjQjgSeE": {
+    "Facility": "Sunkani First Referral Hospital",
+    "State": "Taraba"
   },
   "J2AZkcaFst0": {
     "Facility": "G.D.Chanrai Memorial Hospital",
@@ -27,25 +83,93 @@
     "Facility": "Garkida General Hospital",
     "State": "Adamawa"
   },
+  "VUQpWeYseot": {
+    "Facility": "Gashua General Hospital",
+    "State": "Yobe"
+  },
+  "wr9dSNAmnWp": {
+    "Facility": "GECHAAN lifeline Center",
+    "State": "Taraba"
+  },
+  "JcYmXdOSndf": {
+    "Facility": "Geidem General Hospital",
+    "State": "Yobe"
+  },
+  "KTsdxBrj1K8": {
+    "Facility": "Bali General Hospital",
+    "State": "Taraba"
+  },
+  "kwnTWvSacEg": {
+    "Facility": "Bambur General Hospital",
+    "State": "Taraba"
+  },
+  "FLdJ1UojpI5": {
+    "Facility": "Gembu General Hospital",
+    "State": "Taraba"
+  },
+  "JqquBCRr5Ie": {
+    "Facility": "Warwar General Hospital",
+    "State": "Taraba"
+  },
+  "B0V6x5le9Tj": {
+    "Facility": "Wukari General Hospital",
+    "State": "Taraba"
+  },
+  "M0b885TVP1Q": {
+    "Facility": "Zing General Hospital",
+    "State": "Taraba"
+  },
   "apo2hT9i94X": {
     "Facility": "Girei B Clinic",
     "State": "Adamawa"
   },
-  "x7TBWFDy1GZ": {
-    "Facility": "Gulak Cottage Hospital",
-    "State": "Adamawa"
+  "iWJPpf18IyU": {
+    "Facility": "Jalingo Government House Clinic",
+    "State": "Taraba"
   },
   "wAZ9LXoASUu": {
     "Facility": "Guyuk General Hospital",
     "State": "Adamawa"
   },
+  "YFOBz4PMuNV": {
+    "Facility": "Haruna Tsokwa Memorial General Hospital",
+    "State": "Taraba"
+  },
   "cVnKorgLC9B": {
     "Facility": "Hong Cottage Hospital",
     "State": "Adamawa"
   },
+  "oN0Woo9C7qb": {
+    "Facility": "ISS IDP Camp Clinic Ngala",
+    "State": "Borno"
+  },
   "l01zG9ePfqt": {
     "Facility": "Jada Township Clinic",
     "State": "Adamawa"
+  },
+  "nX6ReqpEjKZ": {
+    "Facility": "Jakusko General Hospital",
+    "State": "Yobe"
+  },
+  "GHUokYisiZe": {
+    "Facility": "Jinya Medical Centre",
+    "State": "Taraba"
+  },
+  "gxpWWY8YvrW": {
+    "Facility": "Konduga General Hospital",
+    "State": "Borno"
+  },
+  "Uyo9Hpc3vql": {
+    "Facility": "Kwararrafa Hospital",
+    "State": "Taraba"
+  },
+  "bUhfkjY3yVP": {
+    "Facility": "Lassa General Hospital",
+    "State": "Borno"
+  },
+  "fakjSY6P1ED": {
+    "Facility": "Maiduguri State Specialist Hospital",
+    "State": "Borno"
   },
   "zxSXLppge0P": {
     "Facility": "Maiha Cottage Hospital",
@@ -55,21 +179,37 @@
     "Facility": "Major Aminu Urban Health Centre",
     "State": "Adamawa"
   },
-  "S5HvxHdK2Vt": {
-    "Facility": "Mayo Belwa Cottage Hospital",
-    "State": "Adamawa"
+  "sP8QEwb0SXo": {
+    "Facility": "Mambila Baptist Hospital",
+    "State": "Taraba"
   },
   "DqWvsU2R8rw": {
     "Facility": "Mayo-Belwa Township Clinic",
+    "State": "Adamawa"
+  },
+  "S5HvxHdK2Vt": {
+    "Facility": "Mayo Belwa Cottage Hospital",
     "State": "Adamawa"
   },
   "Nx613mKHzsk": {
     "Facility": "Michika General Hospital",
     "State": "Adamawa"
   },
+  "eJDSKTK7sO8": {
+    "Facility": "Monguno General Hospital",
+    "State": "Borno"
+  },
   "XyFDmlevgCu": {
     "Facility": "Mubi General Hospital",
     "State": "Adamawa"
+  },
+  "bxBIxJ7LJ4Q": {
+    "Facility": "Muhammed Shuwa Memorial Hospital",
+    "State": "Borno"
+  },
+  "LN72HGCti4v": {
+    "Facility": "Nguru Federal Medical Centre",
+    "State": "Yobe"
   },
   "KXoSesiSLeE": {
     "Facility": "Numan General Hospital",
@@ -79,6 +219,22 @@
     "Facility": "Peace Hospital Jimeta",
     "State": "Adamawa"
   },
+  "z6APuLTiHAX": {
+    "Facility": "Potiskum General Hospital",
+    "State": "Yobe"
+  },
+  "rmGHrOrVW9r": {
+    "Facility": "Rapah Hospital",
+    "State": "Taraba"
+  },
+  "qaVq74gMDhs": {
+    "Facility": "Santa Maria Clinic",
+    "State": "Taraba"
+  },
+  "sBzJ4tnvCMD": {
+    "Facility": "Sani Abacha Specialist Hospital",
+    "State": "Yobe"
+  },
   "qY7ZkVcos1O": {
     "Facility": "Song Cottage Hospital",
     "State": "Adamawa"
@@ -87,9 +243,37 @@
     "Facility": "St. Francis Hospital",
     "State": "Adamawa"
   },
+  "wRBooaCoKz6": {
+    "Facility": "Yakoko St. Monica Health Centre",
+    "State": "Taraba"
+  },
+  "C8zbhPQNbPk": {
+    "Facility": "Sun Shine Clinic Baissa",
+    "State": "Taraba"
+  },
+  "FWEjuDChsDH": {
+    "Facility": "State Specialist Hospital",
+    "State": "Taraba"
+  },
   "SSB1jXm3jdi": {
     "Facility": "Toungo Cottage Hospital",
     "State": "Adamawa"
+  },
+  "w4gxim2NiVj": {
+    "Facility": "Umaru Shehu Ultra Modern Hospital",
+    "State": "Borno"
+  },
+  "wC0drfSNmV4": {
+    "Facility": "Ummah Clinic",
+    "State": "Taraba"
+  },
+  "RFVNndb3OKN": {
+    "Facility": "United Methodist Church of Nigeria Rural Health Programme CSO",
+    "State": "Taraba"
+  },
+  "FQ0Jc3pO5Op": {
+    "Facility": "University of Maiduguri Teaching Hospital",
+    "State": "Borno"
   },
   "gfEDfny3Hp0": {
     "Facility": "Wauro-Jabbe Health Centre",
@@ -103,196 +287,12 @@
     "Facility": "Yola Specialist Hospital",
     "State": "Adamawa"
   },
-  "RWQP4pGxyYS": {
-    "Facility": "Askira General Hospital",
-    "State": "Borno"
+  "Pjak5oARJBf": {
+    "Facility": "Borrong General Hospital",
+    "State": "Adamawa"
   },
-  "gF8UahvIXw9": {
-    "Facility": "Biu General Hospital",
-    "State": "Borno"
-  },
-  "VZCEov8JZIe": {
-    "Facility": "Briyel General Hospital",
-    "State": "Borno"
-  },
-  "o1xyfiaFzDG": {
-    "Facility": "FHI360 Clinic, Banki IDP Camp",
-    "State": "Borno"
-  },
-  "oN0Woo9C7qb": {
-    "Facility": "ISS IDP Camp Clinic Ngala",
-    "State": "Borno"
-  },
-  "gxpWWY8YvrW": {
-    "Facility": "Konduga General Hospital",
-    "State": "Borno"
-  },
-  "bUhfkjY3yVP": {
-    "Facility": "Lassa General Hospital",
-    "State": "Borno"
-  },
-  "fakjSY6P1ED": {
-    "Facility": "Maiduguri State Specialist Hospital",
-    "State": "Borno"
-  },
-  "eJDSKTK7sO8": {
-    "Facility": "Monguno General Hospital",
-    "State": "Borno"
-  },
-  "bxBIxJ7LJ4Q": {
-    "Facility": "Muhammed Shuwa Memorial Hospital",
-    "State": "Borno"
-  },
-  "w4gxim2NiVj": {
-    "Facility": "Umaru Shehu Ultra Modern Hospital",
-    "State": "Borno"
-  },
-  "FQ0Jc3pO5Op": {
-    "Facility": "University of Maiduguri Teaching Hospital",
-    "State": "Borno"
-  },
-  "OQYeCajbh5G": {
-    "Facility": "Fika General Hospital",
-    "State": "Yobe"
-  },
-  "VUQpWeYseot": {
-    "Facility": "Gashua General Hospital",
-    "State": "Yobe"
-  },
-  "JcYmXdOSndf": {
-    "Facility": "Geidem General Hospital",
-    "State": "Yobe"
-  },
-  "nX6ReqpEjKZ": {
-    "Facility": "Jakusko General Hospital",
-    "State": "Yobe"
-  },
-  "LN72HGCti4v": {
-    "Facility": "Nguru Federal Medical Centre",
-    "State": "Yobe"
-  },
-  "z6APuLTiHAX": {
-    "Facility": "Potiskum General Hospital",
-    "State": "Yobe"
-  },
-  "sBzJ4tnvCMD": {
-    "Facility": "Sani Abacha Specialist Hospital",
-    "State": "Yobe"
-  },
-  "JPBcTpp6XUu": {
-    "Facility": "Abubakar Barde First Referral Hospital",
-    "State": "Taraba"
-  },
-  "DVlcYRf680L": {
-    "Facility": "Baissa First Referral Hospital",
-    "State": "Taraba"
-  },
-  "KTsdxBrj1K8": {
-    "Facility": "Bali General Hospital",
-    "State": "Taraba"
-  },
-  "kwnTWvSacEg": {
-    "Facility": "Bambur General Hospital",
-    "State": "Taraba"
-  },
-  "wSzsuzrAmU1": {
-    "Facility": "Donga First Referral Hospital",
-    "State": "Taraba"
-  },
-  "wr9dSNAmnWp": {
-    "Facility": "GECHAAN lifeline Center",
-    "State": "Taraba"
-  },
-  "FLdJ1UojpI5": {
-    "Facility": "Gembu General Hospital",
-    "State": "Taraba"
-  },
-  "YFOBz4PMuNV": {
-    "Facility": "Haruna Tsokwa Memorial General Hospital",
-    "State": "Taraba"
-  },
-  "DgTi7GSbUAE": {
-    "Facility": "Ibi First Referral Hospital",
-    "State": "Taraba"
-  },
-  "Aocjg00w77E": {
-    "Facility": "Jalingo Federal Medical Centre",
-    "State": "Taraba"
-  },
-  "iWJPpf18IyU": {
-    "Facility": "Jalingo Government House Clinic",
-    "State": "Taraba"
-  },
-  "GHUokYisiZe": {
-    "Facility": "Jinya Medical Centre",
-    "State": "Taraba"
-  },
-  "Uyo9Hpc3vql": {
-    "Facility": "Kwararrafa Hospital",
-    "State": "Taraba"
-  },
-  "dlzwTad81iz": {
-    "Facility": "Lau First Referral Hospital",
-    "State": "Taraba"
-  },
-  "sP8QEwb0SXo": {
-    "Facility": "Mambila Baptist Hospital",
-    "State": "Taraba"
-  },
-  "KGNkYub5Oxq": {
-    "Facility": "Mutum Biyu First Referral Hospital",
-    "State": "Taraba"
-  },
-  "rmGHrOrVW9r": {
-    "Facility": "Rapah Hospital",
-    "State": "Taraba"
-  },
-  "qaVq74gMDhs": {
-    "Facility": "Santa Maria Clinic",
-    "State": "Taraba"
-  },
-  "zZXDNWVezMV": {
-    "Facility": "Serti First Referral Hospital",
-    "State": "Taraba"
-  },
-  "FWEjuDChsDH": {
-    "Facility": "State Specialist Hospital",
-    "State": "Taraba"
-  },
-  "C8zbhPQNbPk": {
-    "Facility": "Sun Shine Clinic Baissa",
-    "State": "Taraba"
-  },
-  "IvofjQjgSeE": {
-    "Facility": "Sunkani First Referral Hospital",
-    "State": "Taraba"
-  },
-  "wC0drfSNmV4": {
-    "Facility": "Ummah Clinic",
-    "State": "Taraba"
-  },
-  "RFVNndb3OKN": {
-    "Facility": "United Methodist Church of Nigeria Rural Health Programme CSO",
-    "State": "Taraba"
-  },
-  "JqquBCRr5Ie": {
-    "Facility": "Warwar General Hospital",
-    "State": "Taraba"
-  },
-  "q1D4GdFPtqJ": {
-    "Facility": "Wukari Christian Reformed Church Of Nigeria Aids Action Committee",
-    "State": "Taraba"
-  },
-  "B0V6x5le9Tj": {
-    "Facility": "Wukari General Hospital",
-    "State": "Taraba"
-  },
-  "wRBooaCoKz6": {
-    "Facility": "Yakoko St. Monica Health Centre",
-    "State": "Taraba"
-  },
-  "M0b885TVP1Q": {
-    "Facility": "Zing General Hospital",
-    "State": "Taraba"
+  "KrHj7Ycvctj": {
+    "Facility": "Fufore Cottage Hospital",
+    "State": "Adamawa"
   }
 }

@@ -126,6 +126,12 @@ export class FilterEngine {
         if (!d) return false;
         const range = value === 'CurrentFY'
           ? helper.getPEPFARFiscalYearRange()
+          : value === 'PreviousSemiQuarter'
+          ? helper.getPreviousSemiQuarterRange()
+          : value === 'CurrentSemiQuarter'
+          ? helper.getCurrentSemiQuarterRange()
+          : value === 'Before180DaysAgo'
+          ? helper.getBefore180DaysAgoRange()
           : helper.getRange();
         return d.isBetween(range.start, range.end, 'day', '[]');
       }

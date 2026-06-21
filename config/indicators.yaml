@@ -182,7 +182,8 @@ indicators:
     periodColumn: DateOfHIVTesting
     requiredColumns:
       - DateOfHIVTesting
-      - Modality
+      - TestingSetting
+      - PregnancyStatus
       - Sex
       - Age
       - DATIMCode
@@ -190,9 +191,197 @@ indicators:
       - column: DateOfHIVTesting
         operator: dateMode
         value: DAILY
-      - column: Modality
+      - column: PregnancyStatus
         operator: equals
-        value: "PMTCT (ANC1 Only)"
+        value: "Pregnant"
+        caseSensitive: false
+      - column: TestingSetting
+        operator: inList
+        value:
+          - "ANC"
+          - "Spoke health facility"
+        caseSensitive: false
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: PMTCT_HTS
+    description: "Individuals who received HTS in a PMTCT setting (ANC, Outreach, Spoke health facility, TBAs)"
+    source: CombinedHTS
+    periodColumn: DateOfHIVTesting
+    requiredColumns:
+      - DateOfHIVTesting
+      - TestingSetting
+      - PregnancyStatus
+      - Sex
+      - Age
+      - DATIMCode
+    filters:
+      - column: DateOfHIVTesting
+        operator: dateMode
+        value: DAILY
+      - column: TestingSetting
+        operator: inList
+        value:
+          - "TBA rt-HCW"
+          - "ANC"
+          - "Outreach"
+          - "Spoke health facility"
+          - "TBA Orthodox"
+        caseSensitive: false
+      - column: Sex
+        operator: equals
+        value: "Female"
+        caseSensitive: false
+      - column: PregnancyStatus
+        operator: equals
+        value: "Pregnant"
+        caseSensitive: false
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: PMTCT_HTS_POS
+    description: "HIV positive individuals who received HTS in a PMTCT setting (ANC, Outreach, Spoke health facility, TBAs)"
+    source: CombinedHTS
+    periodColumn: DateOfHIVTesting
+    requiredColumns:
+      - DateOfHIVTesting
+      - TestingSetting
+      - PregnancyStatus
+      - FinalHIVTestResult
+      - Sex
+      - Age
+      - DATIMCode
+    filters:
+      - column: DateOfHIVTesting
+        operator: dateMode
+        value: DAILY
+      - column: FinalHIVTestResult
+        operator: equals
+        value: "Positive"
+        caseSensitive: false
+      - column: TestingSetting
+        operator: inList
+        value:
+          - "TBA rt-HCW"
+          - "ANC"
+          - "Outreach"
+          - "Spoke health facility"
+          - "TBA Orthodox"
+        caseSensitive: false
+      - column: Sex
+        operator: equals
+        value: "Female"
+        caseSensitive: false
+      - column: PregnancyStatus
+        operator: equals
+        value: "Pregnant"
+        caseSensitive: false
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: PMTCT_HTS_Community
+    description: "Individuals who received HTS in a PMTCT community setting (TBA rt-HCW, Outreach, Spoke health facility, TBA Orthodox)"
+    source: CombinedHTS
+    periodColumn: DateOfHIVTesting
+    requiredColumns:
+      - DateOfHIVTesting
+      - TestingSetting
+      - EntryPoint
+      - PregnancyStatus
+      - Sex
+      - Age
+      - DATIMCode
+    filters:
+      - column: DateOfHIVTesting
+        operator: dateMode
+        value: DAILY
+      - column: EntryPoint
+        operator: equals
+        value: "Community"
+        caseSensitive: false
+      - column: TestingSetting
+        operator: inList
+        value:
+          - "TBA rt-HCW"
+          - "Outreach"
+          - "Spoke health facility"
+          - "TBA Orthodox"
+        caseSensitive: false
+      - column: Sex
+        operator: equals
+        value: "Female"
+        caseSensitive: false
+      - column: PregnancyStatus
+        operator: equals
+        value: "Pregnant"
+        caseSensitive: false
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: PMTCT_HTS_POS_Community
+    description: "Individuals who received positive HTS results in a PMTCT community setting (TBA rt-HCW, Outreach, Spoke health facility, TBA Orthodox)"
+    source: CombinedHTS
+    periodColumn: DateOfHIVTesting
+    requiredColumns:
+      - DateOfHIVTesting
+      - TestingSetting
+      - EntryPoint
+      - PregnancyStatus
+      - FinalHIVTestResult
+      - Sex
+      - Age
+      - DATIMCode
+    filters:
+      - column: DateOfHIVTesting
+        operator: dateMode
+        value: DAILY
+      - column: EntryPoint
+        operator: equals
+        value: "Community"
+        caseSensitive: false
+      - column: TestingSetting
+        operator: inList
+        value:
+          - "TBA rt-HCW"
+          - "Outreach"
+          - "Spoke health facility"
+          - "TBA Orthodox"
+        caseSensitive: false
+      - column: FinalHIVTestResult
+        operator: equals
+        value: "Positive"
+        caseSensitive: false
+      - column: Sex
+        operator: equals
+        value: "Female"
+        caseSensitive: false
+      - column: PregnancyStatus
+        operator: equals
+        value: "Pregnant"
         caseSensitive: false
     groupBy:
       - Facility
@@ -210,7 +399,8 @@ indicators:
     requiredColumns:
       - FinalHIVTestResult
       - DateOfHIVTesting
-      - Modality
+      - TestingSetting
+      - PregnancyStatus
       - Sex
       - Age
       - DATIMCode
@@ -218,9 +408,15 @@ indicators:
       - column: DateOfHIVTesting
         operator: dateMode
         value: DAILY
-      - column: Modality
+      - column: PregnancyStatus
         operator: equals
-        value: "PMTCT (ANC1 Only)"
+        value: "Pregnant"
+        caseSensitive: false
+      - column: TestingSetting
+        operator: inList
+        value:
+          - "ANC"
+          - "Spoke health facility"
         caseSensitive: false
       - column: FinalHIVTestResult
         operator: equals
@@ -284,6 +480,33 @@ indicators:
       - column: FinalHIVTestResult
         operator: equals
         value: "Positive"
+        caseSensitive: false
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: PMTCT_Previously_Known
+    description: "HIV positive individuals who were previously known to be HIV positive and received HTS in a PMTCT setting (ANC, Outreach, Spoke health facility, TBAs)"
+    source: CombineMaternal
+    periodColumn: DateofInitialVisit
+    requiredColumns:
+      - TimingofARTinitiationinmother
+      - DateofInitialVisit
+      - Sex
+      - Age
+      - DATIMCode
+    filters:
+      - column: DateofInitialVisit
+        operator: dateMode
+        value: DAILY
+      - column: TimingofARTinitiationinmother
+        operator: equals
+        value: "Prior to this pregnancy"
         caseSensitive: false
     groupBy:
       - Facility
@@ -3684,6 +3907,111 @@ indicators:
       - column: TBTreatmentStartDate
         operator: dateinRange
         value: CurrentFY
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: TB_PREV_N
+    description: "TB_PREV Numerator — PLHIV on ART who completed TPT (initiated in previous semi-annual period, completed in current semi-annual period)"
+    source: CombinedRADET
+    periodColumn: TPTCompletionDate
+    requiredColumns:
+      - CurrentARTStatus
+      - DateOfTPTStart
+      - TPTCompletionDate
+      - TPTCompletionStatus
+      - TPTType
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - Age
+    filters:
+      - column: CurrentARTStatus
+        operator: inList
+        value:
+          - "Active"
+          - "Active Restart"
+        caseSensitive: false
+      - column: DateOfTPTStart
+        operator: dateinRange
+        value: PreviousSemiQuarter
+      - column: TPTCompletionDate
+        operator: dateinRange
+        value: CurrentSemiQuarter
+      - column: TPTCompletionStatus
+        operator: contains
+        value: "complete"
+        caseSensitive: false
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+      - TPTType
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: TB_PREV_D
+    description: "TB_PREV Denominator — ART patients who initiated TPT during the previous semi-annual reporting period"
+    source: CombinedRADET
+    periodColumn: DateOfTPTStart
+    requiredColumns:
+      - CurrentARTStatus
+      - DateOfTPTStart
+      - TPTType
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - Age
+    filters:
+      - column: CurrentARTStatus
+        operator: inList
+        value:
+          - "Active"
+          - "Active Restart"
+        caseSensitive: false
+      - column: DateOfTPTStart
+        operator: dateinRange
+        value: PreviousSemiQuarter
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+      - TPTType
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: VL_Eligibility_Denominator
+    description: "VL Eligibility Denominator — TX_CURR (Active/Active Restart) on ART ≥ 180 days (eligible for VL)"
+    source: CombinedRADET
+    requiredColumns:
+      - CurrentARTStatus
+      - ARTStartDate
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - Age
+    filters:
+      - column: CurrentARTStatus
+        operator: inList
+        value:
+          - "Active"
+          - "Active Restart"
+        caseSensitive: false
+      - column: ARTStartDate
+        operator: dateinRange
+        value: Before180DaysAgo
     groupBy:
       - Facility
       - DATIMCode

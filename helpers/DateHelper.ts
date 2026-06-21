@@ -201,4 +201,26 @@ export class DateHelper {
     const end = start.add(1, 'year').subtract(1, 'day').endOf('day');
     return { start, end };
   }
+
+  /** PEPFAR FY first semi-annual period: Oct 1 → Mar 31. */
+  getPreviousSemiQuarterRange(): DateRange {
+    const start = this.getPEPFARFiscalYearStart();                        // Oct 1
+    const end = start.add(6, 'month').subtract(1, 'day').endOf('day');   // Mar 31
+    return { start, end };
+  }
+
+  /** PEPFAR FY second semi-annual period: Apr 1 → Sep 30. */
+  getCurrentSemiQuarterRange(): DateRange {
+    const start = this.getPEPFARFiscalYearStart().add(6, 'month');        // Apr 1
+    const end = start.add(6, 'month').subtract(1, 'day').endOf('day');   // Sep 30
+    return { start, end };
+  }
+
+  /** ART VL eligibility: any ARTStartDate up to (today - 180 days). */
+  getBefore180DaysAgoRange(): DateRange {
+    return {
+      start: dayjs('1900-01-01').startOf('day'),
+      end: this.today.subtract(180, 'day').endOf('day'),
+    };
+  }
 }
