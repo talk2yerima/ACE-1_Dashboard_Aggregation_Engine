@@ -1,0 +1,39 @@
+{
+  "name": "radet-dashboard-engine",
+  "version": "1.0.0",
+  "description": "RADET Dashboard Aggregation Engine for PEPFAR/DATIM data",
+  "main": "dist/index.js",
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  },
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "validate:config": "ts-node scripts/validate-config.ts",
+    "verify": "npm run validate:config && npm run typecheck",
+    "prestart": "npm run build",
+    "start": "node --max-old-space-size=8192 dist/index.js",
+    "dev": "ts-node index.ts",
+    "clean": "powershell -NoProfile -Command \"Remove-Item -Recurse -Force dist -ErrorAction SilentlyContinue\""
+  },
+  "dependencies": {
+    "@azure/storage-blob": "^12.32.0",
+    "@types/pg": "^8.20.0",
+    "dayjs": "^1.11.10",
+    "dotenv": "^17.4.2",
+    "exceljs": "^4.4.0",
+    "js-yaml": "^4.1.0",
+    "lodash": "^4.17.21",
+    "pg": "^8.22.0",
+    "unzipper": "^0.10.11",
+    "winston": "^3.11.0"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/lodash": "^4.14.202",
+    "@types/node": "^20.10.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.2"
+  }
+}

@@ -1,0 +1,15 @@
+node_modules/
+dist/
+outputs/
+logs/
+.idea/
+nssm/
+input/*.xlsx
+input/*.partial
+input/*.download
+input/.blob-etag-cache.json
+*.log
+.env
+config/*.tmp
+config/compound-suffix-cache.json
+diagnostic.ts

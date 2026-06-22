@@ -1,0 +1,219 @@
+==============================================================================
+  RADET Dashboard Aggregation Engine  -  Deployment Guide
+  AHNi Nigeria  |  Version 1.0
+==============================================================================
+
+WHAT THIS SOFTWARE DOES
+------------------------
+This service automatically:
+  1. Downloads the latest RADET Excel file from Azure Blob Storage
+  2. Processes and aggregates PEPFAR/DATIM indicator data
+  3. Uploads DashboardSummary.csv to Azure Blob Storage (for Power BI)
+
+It runs silently in the background as a Windows Service on a fixed daily
+schedule. No user action is needed after setup.
+
+On first deployment, or whenever the service is started/restarted, it runs
+immediately once. After that it waits for the next scheduled time.
+
+DAILY RUN SCHEDULE
+  09:00   11:00   13:00   15:00   17:00   19:00   21:00
+  (7 runs per day, every 2 hours from 9 AM to 9 PM)
+
+
+==============================================================================
+  REQUIREMENTS  (before you begin)
+==============================================================================
+
+  1. Windows 10, Windows 11, or Windows Server 2016 or newer
+
+  2. Node.js 20 LTS
+     Download: https://nodejs.org  (choose the LTS version)
+     During install: CHECK the box "Add to PATH"
+
+  3. Internet connection
+     Required during installation to download runtime packages.
+     After installation, the service runs independently.
+
+  4. Administrator access on this computer
+
+
+==============================================================================
+  STEP-BY-STEP INSTALLATION
+==============================================================================
+
+STEP 1  -  Copy the deployment folder to the VM
+  Extract the ZIP file to any folder, for example:
+    C:\radet-dashboard\
+
+  The folder contains:
+    setup.bat               <-- You will run this
+    install_service.ps1
+    service_runner.js
+    package.json
+    dist\                   <-- Pre-built application (ready to run)
+    config\                 <-- Indicator definitions
+    .env                    <-- Configuration (Azure keys, schedule)
+    .env.example            <-- Reference copy
+    nssm\                   <-- Service manager (downloaded automatically)
+    DEPLOYMENT_GUIDE.txt    <-- This file
+
+----------------------------------------------------------------------
+STEP 2  -  Run setup.bat
+----------------------------------------------------------------------
+  Double-click  setup.bat
+
+  A black window will appear asking for Administrator permission.
+  Click YES on the security (UAC) prompt.
+
+  The installer will do 4 steps automatically:
+
+    [1/4] Check Node.js is installed
+    [2/4] Download and install runtime packages from internet
+          (this is automatic - takes 1-2 minutes on first run)
+    [3/4] Create folders: input\  outputs\  logs\
+    [4/4] Register the engine as a Windows Service
+
+  When finished you will see:
+    "Setup complete!  Service name: RADET_Dashboard_Engine"
+
+----------------------------------------------------------------------
+STEP 3  -  Confirm the service is running
+----------------------------------------------------------------------
+  Open PowerShell and type:
+    nssm\nssm.exe status RADET_Dashboard_Engine
+
+  You should see:
+    SERVICE_RUNNING
+
+  To watch the live log:
+    powershell -Command "Get-Content logs\RADET_stdout.log -Tail 50 -Wait"
+
+  The service starts automatically every time Windows reboots.
+
+
+==============================================================================
+  CONFIGURATION  (.env file)
+==============================================================================
+
+Open the .env file with Notepad to change settings.
+
+  DATE_MODE=DAILY
+    Which records to process per run.
+    Options: TODAY | DAILY | WEEKLY | MONTHLY | QUARTERLY | YEARLY | CUSTOM
+
+  RUN_SCHEDULE=9,11,13,15,17,19,21
+    Hours of the day (24h) when the engine runs.
+    Default is 7 times per day: 9 AM, 11 AM, 1 PM, 3 PM, 5 PM, 7 PM, 9 PM.
+    To change to fewer runs: e.g.  RUN_SCHEDULE=9,15,21  (3 times/day)
+
+  RUN_ON_START=true
+    Runs immediately once when the Windows Service starts or restarts.
+    Keep this true so first deployment does not wait for the next schedule.
+
+  AZURE_STORAGE_CONNECTION_STRING=...
+    Your Azure Storage account connection string.
+    Get from: Azure Portal > Storage Account > Access keys
+
+  AZURE_RADET_SOURCE_CONTAINER=combine-radets-xls
+    Azure container where RADET Excel files are uploaded by the data team.
+
+  AZURE_STORAGE_CONTAINER=powerbi-datasource
+    Azure container where DashboardSummary.csv is published for Power BI.
+
+  AZURE_TARGET_CONTAINER=powerbi-datasource
+  AZURE_TARGET_BLOB=ACE-1_Targets.xlsx
+    Target workbook used to create DashboardTargets.csv. Weekend dates use
+    the latest available previous target date, so Saturday/Sunday keep
+    Friday's closing target.
+
+After editing .env, restart the service:
+  nssm\nssm.exe restart RADET_Dashboard_Engine
+
+
+==============================================================================
+  SERVICE MANAGEMENT COMMANDS
+==============================================================================
+
+Open PowerShell in the radet-dashboard folder, then run:
+
+  Check status    :  .\nssm\nssm.exe status  RADET_Dashboard_Engine
+  Stop service    :  .\nssm\nssm.exe stop    RADET_Dashboard_Engine
+  Start service   :  .\nssm\nssm.exe start   RADET_Dashboard_Engine
+  Restart service :  .\nssm\nssm.exe restart RADET_Dashboard_Engine
+  Remove service  :  .\nssm\nssm.exe remove  RADET_Dashboard_Engine confirm
+
+  View live log   :  Get-Content logs\RADET_stdout.log -Tail 50 -Wait
+  View error log  :  Get-Content logs\RADET_stderr.log -Tail 20
+
+
+==============================================================================
+  OUTPUT FILES
+==============================================================================
+
+  outputs\DashboardSummary.csv    Uploaded to Azure after each run (Power BI)
+  outputs\DashboardTargets.csv    Unique target rows for Power BI relationships
+  outputs\ValidationReport.xlsx   Data validation report
+  outputs\process.log             Per-run processing detail
+  logs\RADET_stdout.log           Service activity log (auto-rotates at 5 MB)
+  logs\RADET_stderr.log           Error log
+
+
+==============================================================================
+  UPDATING THE SOFTWARE
+==============================================================================
+
+To update to a new version:
+  1. Stop the service:
+       .\nssm\nssm.exe stop RADET_Dashboard_Engine
+  2. Replace the dist\ folder with the new version
+  3. Start the service:
+       .\nssm\nssm.exe start RADET_Dashboard_Engine
+
+Your .env file (with Azure keys and schedule) is not touched during updates.
+
+
+==============================================================================
+  TROUBLESHOOTING
+==============================================================================
+
+PROBLEM: "Node.js not found" during setup
+  FIX: Install Node.js 20 LTS from https://nodejs.org
+       During install, check "Add to PATH". Re-run setup.bat.
+
+PROBLEM: "[2/4] Package installation failed"
+  FIX: Make sure the VM has internet access.
+       Then re-run setup.bat — it will continue from where it stopped.
+
+PROBLEM: NSSM download fails during Step [4/4]
+  FIX: On another computer, download:
+         https://nssm.cc/release/nssm-2.24.zip
+       Extract  win64\nssm.exe  and copy it to:
+         radet-dashboard\nssm\nssm.exe
+       Re-run setup.bat.
+
+PROBLEM: Service installs but shows SERVICE_STOPPED
+  FIX: Check the error log:
+         Get-Content logs\RADET_stderr.log -Tail 30
+       Most common cause: wrong Azure connection string in .env
+
+PROBLEM: Service is running but nothing appears in outputs\
+  FIX: Check logs\RADET_stdout.log — look for error lines.
+       Confirm AZURE_RADET_SOURCE_CONTAINER has a RADET .xlsx file.
+
+PROBLEM: "Access denied" or UAC error
+  FIX: Right-click setup.bat and choose "Run as administrator".
+
+PROBLEM: Want to reinstall cleanly
+  FIX: Run these two commands, then re-run setup.bat:
+         .\nssm\nssm.exe stop   RADET_Dashboard_Engine
+         .\nssm\nssm.exe remove RADET_Dashboard_Engine confirm
+
+
+==============================================================================
+  SUPPORT
+==============================================================================
+
+  AHNi Nigeria  |  ababdullahi@ahnigeria.org.ng
+
+==============================================================================

@@ -1,0 +1,56 @@
+# Static value mappings — human-readable aliases only.
+# UID→name mapping is handled by dynamic calibration (categoryRanks.yaml)
+# and by DATIM-code lookup (orgUnits.yaml).
+# Only add entries here for short codes, numeric codes, or case variants.
+
+mappings:
+
+  Sex:
+    M: "Male"
+    F: "Female"
+    m: "Male"
+    f: "Female"
+    male: "Male"
+    female: "Female"
+    "1": "Male"
+    "2": "Female"
+
+  FinalHIVTestResult:
+    Pos: "Positive"
+    Neg: "Negative"
+    pos: "Positive"
+    neg: "Negative"
+    Ind: "Indeterminate"
+    ind: "Indeterminate"
+
+  CurrentARTStatus:
+    Active: "Active"
+    LTFU: "Lost to Follow-Up"
+    "Lost to Follow Up": "Lost to Follow-Up"
+    TO: "Transferred Out"
+    "Transfer Out": "Transferred Out"
+    ST: "Stopped Treatment"
+    "Stop Treatment": "Stopped Treatment"
+    Dead: "Dead"
+    Inactive: "Inactive"
+
+  TBStatus:
+    "Not a TB Case": "Not a TB Case"
+    Presumptive: "Presumptive TB"
+    Confirmed: "TB Confirmed"
+
+  ARTEnrollmentSetting:
+    "Health Facility": "Health Facility"
+    HF: "Health Facility"
+    Community: "Community"
+    COM: "Community"
+
+  CareEntryPoint:
+    OPD: "OPD"
+    PMTCT: "PMTCT"
+    ANC: "ANC"
+    "TB Clinic": "TB Clinic"
+    "Transfer In": "Transfer In"
+    "CBM2 - Community ART Refill Group: Healthcare Worker- led": "Community ART Refill Group"
+    "Community ART Refill Group": "Community ART Refill Group"
+    CARG: "Community ART Refill Group"
