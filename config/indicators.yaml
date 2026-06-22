@@ -29,6 +29,32 @@ indicators:
     aggregation: COUNT
     disaggregation: Sex
 
+  - name: HTS_TST_Neg
+    description: "Number of individuals who tested HIV Negative"
+    source: CombinedHTS
+    periodColumn: DateOfHIVTesting
+    requiredColumns:
+      - FinalHIVTestResult
+      - DateOfHIVTesting
+      - Sex
+      - Age
+      - DATIMCode
+    filters:
+      - column: FinalHIVTestResult
+        operator: equals
+        value: "Negative"
+      - column: DateOfHIVTesting
+        operator: dateMode
+        value: DAILY
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
   - name: HTS_TST
     description: "Number of individuals who are tested for HIV"
     source: CombinedHTS
@@ -3528,6 +3554,415 @@ indicators:
     aggregation: COUNT
     disaggregation: Sex
 
+  - name: VL_Eligibility_Denominator
+    description: "VL Eligibility Denominator - TX_CURR (Active/Active Restart) on ART >= 180 days (eligible for VL)"
+    source: CombinedRADET
+    requiredColumns:
+      - CurrentARTStatus
+      - ARTStartDate
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - Age
+    filters:
+      - column: CurrentARTStatus
+        operator: inList
+        value:
+          - "Active"
+          - "Active Restart"
+        caseSensitive: false
+      - column: ARTStartDate
+        operator: dateinRange
+        value: Before180DaysAgo
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: EID_WITH_RESULT_WITHIN_60_DAYS
+    description: "EID samples collected within 60 days of delivery with DNA PCR result available"
+    source: CombineMaternal
+    periodColumn: Date of Delivery
+    requiredColumns:
+      - DATIMCode
+      - Date of Delivery
+      - Date of First DNA PCR Sample collection
+      - Result of first DNA PCR test
+      - Date first DNA PCR result was received
+      - Date of Second DNA PCR test sample collection
+      - Result of second DNA PCR test
+      - Date second DNA PCR result was received
+      - Sex
+      - Age
+    computedColumns:
+      - name: EffectiveDNAPCRSampleDate
+        formula: ifNotNull
+        ifNotNull: Date of Second DNA PCR test sample collection
+        then: Date of Second DNA PCR test sample collection
+        else: Date of First DNA PCR Sample collection
+      - name: EffectiveDNAPCRResult
+        formula: ifNotNull
+        ifNotNull: Date of Second DNA PCR test sample collection
+        then: Result of second DNA PCR test
+        else: Result of first DNA PCR test
+      - name: EffectiveDNAPCRResultDate
+        formula: ifNotNull
+        ifNotNull: Date of Second DNA PCR test sample collection
+        then: Date second DNA PCR result was received
+        else: Date first DNA PCR result was received
+    filters:
+      - column: Date of Delivery
+        operator: dateMode
+        value: DAILY
+      - column: EffectiveDNAPCRSampleDate
+        operator: isNotNull
+      - column: EffectiveDNAPCRResult
+        operator: isNotNull
+      - column: EffectiveDNAPCRResultDate
+        operator: isNotNull
+      - column: EffectiveDNAPCRSampleDate
+        operator: dateDiff
+        ref: Date of Delivery
+        value: "<=60"
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: TPT_initiated_clients_already_on_treatment
+    description: "TPT initiated - clients already on treatment"
+    source: CombinedRADET
+    periodColumn: DateOfTPTStart
+    requiredColumns:
+      - CurrentARTStatus
+      - DateOfTPTStart
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - Age
+    filters:
+      - column: CurrentARTStatus
+        operator: inList
+        value:
+          - "Active"
+          - "Active Restart"
+        caseSensitive: false
+      - column: DateOfTPTStart
+        operator: dateinRange
+        value: CurrentFY
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: TPT_initiated_clients_newly_on_treatment
+    description: "TPT initiated - clients newly on treatment"
+    source: CombinedRADET
+    periodColumn: DateOfTPTStart
+    requiredColumns:
+      - CurrentARTStatus
+      - ARTStartDate
+      - CareEntryPoint
+      - DateOfTPTStart
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - Age
+    filters:
+      - column: CurrentARTStatus
+        operator: inList
+        value:
+          - "Active"
+          - "Active Restart"
+        caseSensitive: false
+      - column: CareEntryPoint
+        operator: notContains
+        value: "transfer"
+        caseSensitive: false
+      - column: ARTStartDate
+        operator: dateinRange
+        value: CurrentFY
+      - column: DateOfTPTStart
+        operator: dateinRange
+        value: CurrentFY
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  # Executive Summary indicators
+  # These indicators are included in the main dashboard output and can feed
+  # executive-summary reporting from DashboardSummary.csv.
+
+  - name: PMTCT_ART_Already
+    description: "Pregnant women already on ART prior to the current pregnancy"
+    source: CombineMaternal
+    periodColumn: Date of Initial Visit
+    requiredColumns:
+      - DATIMCode
+      - Date of Initial Visit
+      - Timing of ART initiation in mother
+      - Age
+      - Sex
+    filters:
+      - column: Date of Initial Visit
+        operator: dateMode
+        value: DAILY
+      - column: Timing of ART initiation in mother
+        operator: equals
+        value: "prior to this pregnancy"
+        caseSensitive: false
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: PMTCT_ART_New
+    description: "Pregnant women newly initiated on ART during the current pregnancy"
+    source: CombineMaternal
+    periodColumn: Date of Initial Visit
+    requiredColumns:
+      - DATIMCode
+      - Date of Initial Visit
+      - Timing of ART initiation in mother
+      - Age
+      - Sex
+    filters:
+      - column: Date of Initial Visit
+        operator: dateMode
+        value: DAILY
+      - column: Timing of ART initiation in mother
+        operator: inList
+        value:
+          - "initiated art during pregnancy < 36 weeks gestation period"
+          - "initiated art during pregnancy > 36 weeks gestation period"
+          - "initiated art during pregnancy <36 weeks gestation period"
+          - "initiated art during pregnancy ≥ 36 weeks gestation period"
+          - "initiated art during pregnancy ≥36 weeks gestation period"
+          - "initiated art during pregnancy >= 36 weeks gestation period"
+          - "initiated art during pregnancy >=36 weeks gestation period"
+        caseSensitive: false
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: PMTCT_STAT_New_Pos
+    description: "Women newly tested HIV-positive at ANC or Spoke Health Facility"
+    source: CombinedHTS
+    periodColumn: DateOfHIVTesting
+    requiredColumns:
+      - DATIMCode
+      - DateOfHIVTesting
+      - TestingSetting
+      - FinalHIVTestResult
+      - Sex
+      - Age
+    filters:
+      - column: DateOfHIVTesting
+        operator: dateMode
+        value: DAILY
+      - column: TestingSetting
+        operator: inList
+        value:
+          - "ANC"
+          - "Spoke Health Facility"
+        caseSensitive: false
+      - column: FinalHIVTestResult
+        operator: equals
+        value: "Positive"
+        caseSensitive: false
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: PMTCT_STAT_New_Neg
+    description: "Women newly tested HIV-negative or non-reactive at ANC or Spoke Health Facility"
+    source: CombinedHTS
+    periodColumn: DateOfHIVTesting
+    requiredColumns:
+      - DATIMCode
+      - DateOfHIVTesting
+      - TestingSetting
+      - FinalHIVTestResult
+      - Sex
+      - Age
+    filters:
+      - column: DateOfHIVTesting
+        operator: dateMode
+        value: DAILY
+      - column: TestingSetting
+        operator: inList
+        value:
+          - "ANC"
+          - "Spoke Health Facility"
+        caseSensitive: false
+      - column: FinalHIVTestResult
+        operator: inList
+        value:
+          - "Negative"
+          - "Non Reactive"
+          - "Non-Reactive"
+        caseSensitive: false
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: TB_PREV_N_Already
+    description: "ART patients enrolled before current FY who started TPT in the period"
+    source: CombinedRADET
+    periodColumn: DateOfTPTStart
+    requiredColumns:
+      - DATIMCode
+      - DateOfTPTStart
+      - ARTStartDate
+      - Sex
+      - Age
+    filters:
+      - column: DateOfTPTStart
+        operator: dateMode
+        value: DAILY
+      - column: ARTStartDate
+        operator: dateNotInRange
+        value: CurrentFY
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: TB_PREV_N_New
+    description: "ART patients newly enrolled in current FY who started TPT in the period"
+    source: CombinedRADET
+    periodColumn: DateOfTPTStart
+    requiredColumns:
+      - DATIMCode
+      - DateOfTPTStart
+      - ARTStartDate
+      - Sex
+      - Age
+    filters:
+      - column: DateOfTPTStart
+        operator: dateMode
+        value: DAILY
+      - column: ARTStartDate
+        operator: dateinRange
+        value: CurrentFY
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: TX_TB_N_Already
+    description: "Active ART patients (enrolled before current FY) with TB diagnostic result in the period"
+    source: CombinedRADET
+    periodColumn: DateOfTBResultReturn
+    requiredColumns:
+      - DATIMCode
+      - DateOfTBResultReturn
+      - CurrentARTStatus
+      - ARTStartDate
+      - Sex
+      - Age
+    filters:
+      - column: DateOfTBResultReturn
+        operator: dateMode
+        value: DAILY
+      - column: CurrentARTStatus
+        operator: inList
+        value:
+          - "Active"
+          - "Active Restart"
+        caseSensitive: false
+      - column: ARTStartDate
+        operator: dateNotInRange
+        value: CurrentFY
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: TX_TB_N_New
+    description: "Active ART patients (newly enrolled in current FY) with TB diagnostic result in the period"
+    source: CombinedRADET
+    periodColumn: DateOfTBResultReturn
+    requiredColumns:
+      - DATIMCode
+      - DateOfTBResultReturn
+      - CurrentARTStatus
+      - ARTStartDate
+      - Sex
+      - Age
+    filters:
+      - column: DateOfTBResultReturn
+        operator: dateMode
+        value: DAILY
+      - column: CurrentARTStatus
+        operator: inList
+        value:
+          - "Active"
+          - "Active Restart"
+        caseSensitive: false
+      - column: ARTStartDate
+        operator: dateinRange
+        value: CurrentFY
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
 # Formula-based indicators (calculated from other indicators)
 formulaIndicators:
 
@@ -3585,73 +4020,3 @@ formulaIndicators:
       - Facility
       - DATIMCode
       - State
-  - name: TPT_initiated_clients_already_on_treatment
-    description: "TPT initiated — clients already on treatment"
-    source: Sheet1
-    periodColumn: DateOfTPTStart
-    requiredColumns:
-      - CurrentARTStatus
-      - DateOfTPTStart
-      - Facility
-      - DATIMCode
-      - State
-      - Sex
-      - Age
-    filters:
-      - column: CurrentARTStatus
-        operator: inList
-        value:
-          - "Active"
-          - "Active Restart"
-        caseSensitive: false
-      - column: DateOfTPTStart
-        operator: dateinRange
-        value: CurrentFY
-    groupBy:
-      - Facility
-      - DATIMCode
-      - State
-      - Sex
-      - AgeBand
-    aggregation: COUNT
-    disaggregation: Sex
-
-  - name: TPT_initiated_clients_newly_on_treatment
-    description: "TPT initiated — clients newly on treatment"
-    source: Sheet1
-    periodColumn: DateOfTPTStart
-    requiredColumns:
-      - CurrentARTStatus
-      - ARTStartDate
-      - CareEntryPoint
-      - DateOfTPTStart
-      - Facility
-      - DATIMCode
-      - State
-      - Sex
-      - Age
-    filters:
-      - column: CurrentARTStatus
-        operator: inList
-        value:
-          - "Active"
-          - "Active Restart"
-        caseSensitive: false
-      - column: CareEntryPoint
-        operator: notContains
-        value: "transfer"
-        caseSensitive: false
-      - column: ARTStartDate
-        operator: dateinRange
-        value: CurrentFY
-      - column: DateOfTPTStart
-        operator: dateinRange
-        value: CurrentFY
-    groupBy:
-      - Facility
-      - DATIMCode
-      - State
-      - Sex
-      - AgeBand
-    aggregation: COUNT
-    disaggregation: Sex

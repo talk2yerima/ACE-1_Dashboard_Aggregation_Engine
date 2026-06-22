@@ -14,15 +14,14 @@ $LogDir     = Join-Path $ScriptDir "logs"
 $NssmDir    = Join-Path $ScriptDir "nssm"
 $NssmExe    = Join-Path $NssmDir   "nssm.exe"
 
-# --- Auto-elevate to Administrator ---
+# --- Verify Administrator (setup.bat self-elevates before calling this) ---
 $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole(
     [Security.Principal.WindowsBuiltInRole]"Administrator"
 )
 if (-not $isAdmin) {
-    Write-Host "Relaunching as Administrator ..."
-    $elevateArgs = "-NoProfile -ExecutionPolicy Bypass -File `"$($MyInvocation.MyCommand.Definition)`""
-    Start-Process powershell -ArgumentList $elevateArgs -Verb RunAs
-    exit
+    Write-Error "This script must run as Administrator. Run setup.bat which handles elevation automatically."
+    Read-Host "Press Enter to exit"
+    exit 1
 }
 
 # --- Check prerequisites ---
@@ -45,24 +44,31 @@ if (-not (Test-Path (Join-Path $ScriptDir ".env"))) {
     exit 1
 }
 
-# --- Download NSSM if not present ---
+# --- Ensure NSSM is present (bundled in ZIP or download fallback) ---
 if (-not (Test-Path $NssmExe)) {
-    Write-Host "Downloading NSSM ..."
+    Write-Host "NSSM not found locally - attempting download ..." -ForegroundColor Yellow
+    Write-Host "  (If this VM has no internet, place nssm.exe at: $NssmExe)"
     $NssmZip     = Join-Path $env:TEMP "nssm.zip"
     $NssmExtract = Join-Path $env:TEMP "nssm_extract"
     try {
-        Invoke-WebRequest -Uri "https://nssm.cc/release/nssm-2.24.zip" -OutFile $NssmZip -UseBasicParsing
+        Invoke-WebRequest -Uri "https://nssm.cc/release/nssm-2.24.zip" -OutFile $NssmZip -UseBasicParsing -TimeoutSec 30
         Expand-Archive -Path $NssmZip -DestinationPath $NssmExtract -Force
         New-Item -ItemType Directory -Force -Path $NssmDir | Out-Null
         Copy-Item "$NssmExtract\nssm-2.24\win64\nssm.exe" $NssmExe -Force
         Remove-Item $NssmZip, $NssmExtract -Recurse -Force -ErrorAction SilentlyContinue
-        Write-Host "NSSM ready." -ForegroundColor Green
+        Write-Host "NSSM downloaded and ready." -ForegroundColor Green
     }
     catch {
-        Write-Error "NSSM download failed: $_"
+        Write-Host ""
+        Write-Host "ERROR: Could not download NSSM (no internet or firewall blocking nssm.cc)." -ForegroundColor Red
+        Write-Host "  Fix: Download nssm-2.24.zip from https://nssm.cc on another machine," -ForegroundColor Yellow
+        Write-Host "       extract win64\nssm.exe and place it at:" -ForegroundColor Yellow
+        Write-Host "       $NssmExe" -ForegroundColor Cyan
         Read-Host "Press Enter to exit"
         exit 1
     }
+} else {
+    Write-Host "NSSM found: $NssmExe" -ForegroundColor Green
 }
 
 # --- Create logs dir (needed before short-path resolution) ---
@@ -70,26 +76,42 @@ if (-not (Test-Path $LogDir)) {
     New-Item -ItemType Directory -Path $LogDir | Out-Null
 }
 
-# --- Resolve 8.3 short paths (no spaces - safe for NSSM) ---
+# --- Resolve 8.3 short paths (fallback to quoted long path if 8.3 disabled) ---
 function Get-ShortPath($p) {
     $s = & cmd /c "for %I in (`"$p`") do @echo %~sI" 2>$null
-    return $s.Trim()
+    $s = $s.Trim()
+    # If 8.3 resolution failed (returned same long path or empty), use original
+    if (-not $s -or $s -eq $p) { return $p }
+    return $s
 }
+
+function Quote-IfSpaces($p) {
+    if ($p -match ' ') { return "`"$p`"" }
+    return $p
+}
+
 $NodeShort   = Get-ShortPath $NodeExe
 $RunnerShort = Get-ShortPath $Runner
 $DirShort    = Get-ShortPath $ScriptDir
 $LogShort    = Get-ShortPath $LogDir
 
-Write-Host "Paths resolved (8.3 short form):"
-Write-Host "  Node   : $NodeShort"
-Write-Host "  Runner : $RunnerShort"
+# Wrap in quotes if path still contains spaces (8.3 disabled on this drive)
+$NodeArg    = Quote-IfSpaces $NodeShort
+$RunnerArg  = Quote-IfSpaces $RunnerShort
+
+Write-Host "Paths:"
+Write-Host "  Node   : $NodeArg"
+Write-Host "  Runner : $RunnerArg"
 Write-Host "  Dir    : $DirShort"
 
-# --- Remove any existing service ---
+# --- Remove any existing service (handles RUNNING, PAUSED, STOPPED states) ---
 Write-Host "Checking for existing service '$ServiceName' ..."
 $svcQuery = & sc.exe query $ServiceName 2>&1
 if ("$svcQuery" -notmatch "does not exist") {
     Write-Host "Existing service found - removing ..." -ForegroundColor Yellow
+    # Resume first if paused (nssm stop fails on PAUSED services)
+    & sc.exe control $ServiceName RESUME 2>&1 | Out-Null
+    Start-Sleep -Seconds 1
     & $NssmExe stop   $ServiceName confirm 2>&1 | Out-Null
     Start-Sleep -Seconds 3
     & $NssmExe remove $ServiceName confirm 2>&1 | Out-Null
@@ -103,17 +125,17 @@ if ("$svcQuery" -notmatch "does not exist") {
 
 # --- Install service ---
 Write-Host "Installing service '$ServiceName' ..."
-& $NssmExe install $ServiceName $NodeShort $RunnerShort
+& $NssmExe install $ServiceName $NodeArg $RunnerArg
 
-& $NssmExe set $ServiceName Application   $NodeShort
-& $NssmExe set $ServiceName AppParameters $RunnerShort
+& $NssmExe set $ServiceName Application   $NodeArg
+& $NssmExe set $ServiceName AppParameters $RunnerArg
 & $NssmExe set $ServiceName AppDirectory  $DirShort
 & $NssmExe set $ServiceName DisplayName   $DisplayName
 & $NssmExe set $ServiceName Description   $Description
 & $NssmExe set $ServiceName Start         SERVICE_AUTO_START
 
-$StdoutLog = Join-Path $LogShort "RADET_stdout.log"
-$StderrLog = Join-Path $LogShort "RADET_stderr.log"
+$StdoutLog = Quote-IfSpaces (Join-Path $LogShort "RADET_stdout.log")
+$StderrLog = Quote-IfSpaces (Join-Path $LogShort "RADET_stderr.log")
 & $NssmExe set $ServiceName AppStdout                    $StdoutLog
 & $NssmExe set $ServiceName AppStderr                    $StderrLog
 & $NssmExe set $ServiceName AppStdoutCreationDisposition 4
@@ -128,8 +150,14 @@ $StderrLog = Join-Path $LogShort "RADET_stderr.log"
 Write-Host ""
 Write-Host "Starting service ..."
 & $NssmExe start $ServiceName
-Start-Sleep -Seconds 3
-$status = & $NssmExe status $ServiceName
+
+# Wait up to 15 seconds for service to reach RUNNING
+$status = ""
+for ($i = 0; $i -lt 5; $i++) {
+    Start-Sleep -Seconds 3
+    $status = (& $NssmExe status $ServiceName).Trim()
+    if ($status -eq "SERVICE_RUNNING") { break }
+}
 
 Write-Host ""
 Write-Host "========================================" -ForegroundColor Cyan
@@ -147,5 +175,6 @@ Write-Host ""
 Write-Host "Logs:"
 Write-Host "  Get-Content '$LogDir\RADET_stdout.log' -Tail 50 -Wait"
 Write-Host ""
-Write-Host "Schedule: runs every RUN_INTERVAL_HOURS hours (default: 6)"
+Write-Host "Schedule: 09:00  11:00  13:00  15:00  17:00  19:00  21:00  (daily)"
+Write-Host "Startup : Runs immediately once when service starts/restarts"
 Read-Host "Press Enter to close"

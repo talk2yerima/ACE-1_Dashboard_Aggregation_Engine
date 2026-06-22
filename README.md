@@ -28,10 +28,10 @@ A modular, YAML-driven aggregation engine that reads RADET/HTS Excel workbooks a
 
 ### Prerequisites
 
-- **Node.js** v18 or later — [download here](https://nodejs.org)
-- **npm** v9 or later (bundled with Node.js)
+- **Node.js** v20 LTS or later - [download here](https://nodejs.org)
+- **npm** v10 or later (bundled with Node.js 20)
 
-> **No virtual environment needed.** This is a Node.js project. All dependencies are installed locally into `node_modules/` by npm — no Python venv, conda, or any other environment manager is required.
+> **No virtual environment needed.** This is a Node.js project. All dependencies are installed locally into `node_modules/` by npm - no Python venv, conda, or any other environment manager is required.
 
 ### 1. Install dependencies
 
@@ -39,7 +39,7 @@ Run this once after cloning the repo (or whenever `package.json` changes):
 
 ```bash
 npm install
-```Remove-Item Env:RADET_FILE
+```
 
 ### 2. Place your workbook
 
@@ -65,14 +65,15 @@ This creates `input/RADET.xlsx` with 500 RADET rows and 300 HTS rows.
 npm run dev
 ```
 
-**Production** (compile first, then run the compiled output):
+**Production** (validate config, type-check, compile, then run the compiled output):
 
 ```bash
 # PowerShell (Windows)
-npm run build; npm start
+npm run verify
+npm start
 
 # Bash / Git Bash / Linux / macOS
-npm run build && npm start
+npm run verify && npm start
 ```
 
 **Or run directly with ts-node:**
@@ -89,10 +90,15 @@ All outputs are written to the `outputs/` folder:
 
 | File | Description |
 |------|-------------|
-| `DashboardSummary.xlsx` | Main dashboard (normalized rows + indicator pivot sheet) |
-| `DashboardSummary.csv` | Same data as CSV for Power BI / Python |
+| `DashboardSummary.csv` | Main dashboard data for Power BI / Python |
+| `DashboardTargets.csv` | Unique target rows for Power BI relationships |
 | `ValidationReport.xlsx` | Any data quality issues found |
 | `process.log` | Full processing log with timings |
+
+When `ACE-1_Targets.xlsx` is available in the configured Azure target
+container, `DashboardTargets.csv` is generated beside the main dashboard
+output. Weekend periods use the latest previous target date, so Saturday
+and Sunday carry Friday's closing target.
 
 ---
 
@@ -111,7 +117,7 @@ radet-dashboard/
 │   ├── FilterEngine.ts      ← Row filtering logic
 │   ├── GroupEngine.ts       ← Grouping & aggregation
 │   ├── FormulaEngine.ts     ← Calculated indicators
-│   └── OutputWriter.ts      ← Excel & CSV output
+│   └── OutputWriter.ts      ← CSV & validation output
 │
 ├── helpers/
 │   ├── DateHelper.ts        ← Date parsing & range logic
@@ -150,7 +156,7 @@ For each indicator definition:
      ↓
 Calculate formula indicators (LINKAGE_RATE, TB_TX_GAP, etc.)
      ↓
-Write DashboardSummary.xlsx + .csv
+Stream DashboardSummary.csv
      ↓
 Write ValidationReport.xlsx (if issues found)
      ↓
@@ -402,6 +408,9 @@ One row per unique combination of: `Facility × Indicator × Disaggregation × A
 | Command | Description |
 |---------|-------------|
 | `npm run dev` | Run with ts-node (development) |
+| `npm run validate:config` | Validate indicator, formula, sheet, and column config references |
+| `npm run typecheck` | Type-check without writing compiled files |
+| `npm run verify` | Run config validation and type-checking |
 | `npm run build` | Compile TypeScript to `dist/` |
 | `npm start` | Run compiled output |
 | `npm run clean` | Remove `dist/` folder |
@@ -419,7 +428,7 @@ The engine is built on **SOLID principles** with clean separation of concerns:
 | `FilterEngine` | Stateless row filter; evaluates one `FilterDef` at a time |
 | `GroupEngine` | Groups filtered rows by keys; computes COUNT/SUM/AVG/etc. |
 | `FormulaEngine` | Post-processing; calculates derived indicators from existing dashboard rows |
-| `OutputWriter` | Renders `DashboardSummary.xlsx`, `.csv`, and `ValidationReport.xlsx` |
+| `OutputWriter` | Streams `DashboardSummary.csv` and writes `ValidationReport.xlsx` |
 | `DateHelper` | Parses dates (multiple formats); determines current date range |
 | `AgeBandHelper` | Assigns PEPFAR age band from a numeric age |
 | `MappingHelper` | Looks up standardised values from the mappings config |

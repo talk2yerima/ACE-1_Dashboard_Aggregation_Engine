@@ -29,6 +29,28 @@ const DASHBOARD_COLUMNS = [
   { header: 'AchievementPct', key: 'AchievementPct',  width: 16 },
 ];
 
+export interface TargetSummaryRow {
+  Period: string;
+  TargetDate: string;
+  State: string;
+  Facility: string;
+  DATIMCode: string;
+  Indicator: string;
+  Sex: string;
+  Target: number;
+}
+
+const TARGET_COLUMNS = [
+  'Period',
+  'TargetDate',
+  'State',
+  'Facility',
+  'DATIMCode',
+  'Indicator',
+  'Sex',
+  'Target',
+];
+
 export interface OutputWriterOptions {
   outputDir: string;
   logger: Logger;
@@ -93,6 +115,28 @@ export class OutputWriter {
       stream.once('finish', resolve);
       stream.once('error', reject);
     });
+  }
+
+  openTargetCsvStream(csvPath: string): fs.WriteStream {
+    const stream = fs.createWriteStream(csvPath, { encoding: 'utf8' });
+    stream.write(TARGET_COLUMNS.join(',') + '\n');
+    return stream;
+  }
+
+  writeTargetCsvRow(stream: fs.WriteStream, row: TargetSummaryRow): void {
+    const periodParsed = dayjs(row.Period, 'DD/MM/YYYY', true);
+    const periodStr = periodParsed.isValid() ? periodParsed.format('YYYY-MM-DD') : row.Period;
+    const line = [
+      this.csvCell(periodStr),
+      this.csvCell(row.TargetDate),
+      this.csvCell(row.State),
+      this.csvCell(row.Facility),
+      this.csvCell(row.DATIMCode),
+      this.csvCell(row.Indicator),
+      this.csvCell(row.Sex),
+      this.csvCell(row.Target),
+    ].join(',') + '\n';
+    stream.write(line);
   }
 
   async writeValidationReport(issues: ValidationIssue[]): Promise<string> {

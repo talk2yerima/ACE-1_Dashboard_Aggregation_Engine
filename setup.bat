@@ -1,57 +1,60 @@
 @echo off
 REM ============================================================
-REM  setup.bat  -  First-time setup for RADET Dashboard Engine
-REM  Double-click or run from Command Prompt.
+REM  setup.bat  -  Setup for RADET Dashboard Engine
+REM  Double-click to install. Requires internet connection.
 REM ============================================================
+
+REM -- Self-elevate to Administrator if not already --
+net session >nul 2>&1
+IF %ERRORLEVEL% NEQ 0 (
+    echo Requesting Administrator privileges...
+    powershell -NoProfile -Command ^
+        "Start-Process -FilePath cmd.exe -ArgumentList '/c cd /d \"%~dp0\" && \"%~f0\"' -Verb RunAs -Wait"
+    exit /b
+)
+
+cd /d "%~dp0"
+
 echo.
 echo ============================================
 echo  RADET Dashboard Aggregation Engine  -  Setup
 echo ============================================
 echo.
 
-REM -- 1. Check Node.js --
+REM -- [1/4] Check Node.js --
 node --version >nul 2>&1
 IF %ERRORLEVEL% NEQ 0 (
     echo [ERROR] Node.js not found.
-    echo         Install Node.js LTS from https://nodejs.org
-    echo         IMPORTANT: Check "Add to PATH" during install.
+    echo.
+    echo         Please install Node.js LTS from:
+    echo           https://nodejs.org
+    echo.
+    echo         IMPORTANT: During install, check the box:
+    echo           "Add to PATH"
+    echo.
+    echo         Then re-run this setup.
     pause & exit /b 1
 )
-echo [1/5] Node.js OK:
+echo [1/4] Node.js found:
 node --version
 
-REM -- 2. Check npm --
-npm --version >nul 2>&1
+REM -- [2/4] Install production dependencies from internet --
+echo.
+echo [2/4] Installing production packages from internet...
+echo       (This downloads only what is needed to run - no dev tools)
+call npm install --omit=dev --prefer-offline
 IF %ERRORLEVEL% NEQ 0 (
-    echo [ERROR] npm not found. Reinstall Node.js.
+    echo.
+    echo [ERROR] Package installation failed.
+    echo         Make sure this computer has an internet connection.
+    echo         Then re-run this setup.
     pause & exit /b 1
 )
-echo       npm OK:
-npm --version
+echo       Packages installed successfully.
 
-REM -- 3. Install dependencies --
+REM -- [3/4] Create folders and verify .env --
 echo.
-echo [2/5] Installing npm dependencies...
-call npm install --omit=dev
-IF %ERRORLEVEL% NEQ 0 (
-    echo [ERROR] npm install failed. Check your internet connection.
-    pause & exit /b 1
-)
-echo       Dependencies installed.
-
-REM -- 4. Build TypeScript --
-echo.
-echo [3/5] Building TypeScript...
-call npm run build
-IF %ERRORLEVEL% NEQ 0 (
-    echo [ERROR] TypeScript build failed. Check for compile errors above.
-    pause & exit /b 1
-)
-echo       Build complete.
-
-REM -- 5. Create folders and .env --
-echo.
-echo [4/5] Preparing folders and config...
+echo [3/4] Preparing folders and config...
 IF NOT EXIST "input"   mkdir input
 IF NOT EXIST "outputs" mkdir outputs
 IF NOT EXIST "logs"    mkdir logs
@@ -62,40 +65,40 @@ IF NOT EXIST ".env" (
     echo       .env created from .env.example
     echo.
     echo  *** ACTION REQUIRED ***
-    echo  Open .env and fill in your values before continuing:
+    echo  Open .env with Notepad and fill in your Azure values:
     echo    AZURE_STORAGE_CONNECTION_STRING
-    echo    AZURE_STORAGE_CONTAINER  (default: powerbi-datasource)
-    echo    RUN_INTERVAL_HOURS       (default: 6)
+    echo    AZURE_STORAGE_CONTAINER
     echo.
-    echo  Also drop your ACE-1_Combined_RADET*.xlsx file into the input\ folder.
+    pause
 ) ELSE (
-    echo       .env already exists.
+    echo       .env found - OK.
 )
 
-REM -- 6. Install the Windows Service --
+REM -- [4/4] Install the Windows Service --
 echo.
-echo [5/5] Installing RADET Dashboard Engine as a Windows Service...
-echo       (This will open a UAC prompt to grant Administrator rights)
+echo [4/4] Installing RADET Dashboard Engine as a Windows Service...
 echo.
 powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0install_service.ps1"
+IF %ERRORLEVEL% NEQ 0 (
+    echo.
+    echo [ERROR] Service installation failed. See messages above.
+    pause & exit /b 1
+)
 
 echo.
 echo ============================================
 echo  Setup complete!
 echo ============================================
 echo.
-echo  The service is now running as: RADET_Dashboard_Engine
-echo  It will process the RADET file every RUN_INTERVAL_HOURS hours
-echo  (default: 6 hours) and upload the output to Azure Blob Storage.
+echo  Service name : RADET_Dashboard_Engine
+echo  First run    : Immediately when service starts/restarts
+echo  Schedule     : 09:00  11:00  13:00  15:00  17:00  19:00  21:00
+echo  Logs         : %~dp0logs\RADET_stdout.log
 echo.
-echo  To check status:
-echo    nssm\nssm.exe status RADET_Dashboard_Engine
-echo.
-echo  To view live logs:
-echo    powershell -Command "Get-Content logs\RADET_stdout.log -Tail 50 -Wait"
-echo.
-echo  To drop a new RADET file:
-echo    Copy ACE-1_Combined_RADET*.xlsx into the input\ folder.
-echo    The next scheduled run will pick it up automatically.
+echo  Useful commands (run from this folder):
+echo    Check status : nssm\nssm.exe status RADET_Dashboard_Engine
+echo    View logs    : powershell -Command "Get-Content logs\RADET_stdout.log -Tail 50 -Wait"
+echo    Stop service : nssm\nssm.exe stop RADET_Dashboard_Engine
+echo    Start service: nssm\nssm.exe start RADET_Dashboard_Engine
 echo.
 pause

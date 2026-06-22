@@ -123,6 +123,56 @@ CombinedHTS:
   - PREPOffered        # 25
   - PREPAccepted       # 26
 
+CombineMaternal:
+  - DATIMCode                                            # 1  (datimCode)
+  - PatientId                                            # 2  (Patient ID)
+  - "Mother's Hospital Num"                              # 3
+  - Age                                                  # 4
+  - ANC Setting                                          # 5
+  - Point of Entry                                       # 6
+  - Date of Initial Visit                                # 7
+  - Date of Index ANC Registration                       # 8
+  - Syphilis Test Result                                 # 9
+  - Treated for Syphilis                                 # 10
+  - TB screening Status                                  # 11
+  - "Mother's ART Start Date"                            # 12
+  - Timing of ART initiation in mother                   # 13
+  - GA at last visit (weeks)                             # 14
+  - "Mother's Current ART Status"                        # 15
+  - Due Date for VL Sample collection @ 32 weeks         # 16
+  - Date for VL sample collection @ 32 weeks             # 17
+  - Current Viral load Result                            # 18
+  - Date of Current VL                                   # 19
+  - Date of Delivery                                     # 20
+  - Place of Delivery                                    # 21
+  - Mode of Delivery                                     # 22
+  - Fetal outcome (Child status)                         # 23
+  - "Child's hospital ID number"                         # 24
+  - Sex                                                  # 25  (Sex - Child)
+  - Birth Weight                                         # 26
+  - Date of ARV Prophylaxis Commencemment                # 27
+  - Type of Prophylaxis (ePNP or regular)                # 28
+  - Date of CTX (Cotrimoxazole)                          # 29
+  - Current infant feeding options                       # 30
+  - Date of First DNA PCR Sample collection              # 31
+  - Result of first DNA PCR test                         # 32
+  - Date first DNA PCR result was received               # 33
+  - Date of Second DNA PCR test sample collection        # 34
+  - Result of second DNA PCR test                        # 35
+  - Date second DNA PCR result was received              # 36
+  - Date of third DNA PCR test sample collection         # 37
+  - Result of third DNA PCR test                         # 38
+  - Date third DNA PCR result was received               # 39
+  - Date of fourth DNA PCR test sample collection        # 40
+  - Result of fourth DNA PCR test                        # 41
+  - Date fourth DNA PCR result was received              # 42
+  - Date of confirmatory DNA PCR test sample collection  # 43
+  - Result of confirmatory DNA PCR test                  # 44
+  - Date confirmatory DNA PCR result was received        # 45
+  - Date of Child Final Outcome test                     # 46
+  - Result (Child Final Outcome)                         # 47
+  - "Child's ART Start Date"                             # 48
+
 CombineIndex:
   - DATIMCode                  # 1
   - IndexClientId              # 2  (Index client code/unique ID)

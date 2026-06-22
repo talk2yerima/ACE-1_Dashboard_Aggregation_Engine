@@ -41,10 +41,15 @@ export interface ValidationIssue {
 
 export interface ComputedColumnDef {
   name: string;
-  formula: 'dateAdd';
-  sourceColumn: string;
-  addColumn: string;
-  unit: 'day' | 'week' | 'month' | 'year';
+  formula: 'dateAdd' | 'ifNotNull';
+  // dateAdd
+  sourceColumn?: string;
+  addColumn?: string;
+  unit?: 'day' | 'week' | 'month' | 'year';
+  // ifNotNull: set to `then` column's value when `ifNotNull` column is non-empty, else `else` column
+  ifNotNull?: string;
+  then?: string;
+  else?: string;
 }
 
 export interface CrossSheetLookup {
@@ -379,6 +384,176 @@ export class AggregationEngine {
 
     const seenSheets = new Set<string>();
 
+    // Only keep in memory the rows needed by formula indicators as inputs.
+    // All other rows are streamed immediately via onRow() to avoid OOM.
+    const formulaInputIndicators = new Set<string>();
+    for (const fd of this.indicatorsConfig.formulaIndicators ?? []) {
+      formulaInputIndicators.add(fd.numerator);
+      formulaInputIndicators.add(fd.denominator);
+    }
+    const formulaInputRows: DashboardRow[] = [];
+
+    const buildDynamicMappings = (): Map<string, Map<string, string>> => {
+      const dynamicMappings = new Map<string, Map<string, string>>();
+      for (const [col, labels] of Object.entries(this.categoryRanksConfig.categoryRanks)) {
+        const colFreq = freq.get(col);
+        if (!colFreq || colFreq.size === 0) continue;
+        const sorted = [...colFreq.entries()].sort((a, b) => b[1] - a[1]);
+        const colMap = new Map<string, string>();
+        for (let i = 0; i < Math.min(labels.length, sorted.length); i++) {
+          const [normVal, count] = sorted[i];
+          colMap.set(normVal, labels[i]);
+          this.logger.info(
+            `  [${col}] rank ${i + 1}: "${normVal}" (n=${count.toLocaleString()}) -> "${labels[i]}"`,
+          );
+        }
+        dynamicMappings.set(col, colMap);
+      }
+      return dynamicMappings;
+    };
+
+    const finaliseIndicators = (
+      indicatorsToFinalise: IndicatorDef[],
+      dynamicMappings: Map<string, Map<string, string>>,
+    ): void => {
+      for (const ind of indicatorsToFinalise) {
+        this.logger.info(`\n-- Finalising indicator: ${ind.name} --`);
+        const indRaw = rawAccMap.get(ind.name)!;
+
+        if (indRaw.size === 0) {
+          this.logger.warn(`  No rows accumulated for ${ind.name} (all filtered by date range)`);
+          continue;
+        }
+
+        // Categorical filters that apply to mapped values (exclude dateMode)
+        const catFilters   = ind.filters.filter(f => f.operator !== 'dateMode');
+        const anyOfFilters = ind.anyOf ?? [];
+
+        // Final accumulator after mapping + re-grouping
+        const finalAcc  = new Map<string, StreamAcc>();
+        const finalComps = new Map<string, Record<string, string>>();
+
+        for (const [, { rawComponents, acc }] of indRaw) {
+          // Map each raw component to a human-readable label
+          const mapped: Record<string, string> = { __period__: rawComponents['__period__'] };
+
+          for (const [field, rawNorm] of Object.entries(rawComponents)) {
+            if (field.startsWith('__')) continue;
+
+            // Dynamic mapping (calibrated in this same streaming pass)
+            if (dynamicMappings.has(field)) {
+              const label = dynamicMappings.get(field)!.get(rawNorm);
+              if (label !== undefined) { mapped[field] = label; continue; }
+            }
+            // Static mappings.yaml fallback
+            if (this.mappingHelper.hasMapping(field)) {
+              mapped[field] = String(this.mappingHelper.map(field, rawNorm));
+            } else {
+              mapped[field] = rawNorm;
+            }
+          }
+
+          // Resolve org-unit names from facility DATIM code
+          const datim = rawComponents['__datim__'];
+          if (datim) {
+            const ou = this.orgUnitHelper.lookupByDATIM(datim);
+            if (ou) {
+              if (ou.facility) mapped['Facility'] = ou.facility;
+              if (ou.state)    mapped['State']    = ou.state;
+              if (ou.lga)      mapped['LGA']      = ou.lga;
+            } else {
+              // Fallback: look in the RADET cross-sheet map
+              const rInfo = this.datimToFacility.get(datim);
+              if (rInfo) {
+                mapped['Facility'] = rInfo.Facility;
+                mapped['State']    = rInfo.State;
+              }
+            }
+            mapped['DATIMCode'] = datim;
+          } else {
+            mapped['State']    = '';
+            mapped['Facility'] = '';
+            mapped['LGA']      = '';
+            // Only use __rawDatimCode__ if it is a proper 11-char DATIM UID.
+            const rawDatimCode = rawComponents['__rawDatimCode__'];
+            const isValidDatim = !!rawDatimCode &&
+              rawDatimCode.length === 11 &&
+              /^[A-Za-z][A-Za-z0-9]{10}$/.test(rawDatimCode);
+            mapped['DATIMCode'] = isValidDatim ? rawDatimCode : '';
+            if (isValidDatim) {
+              const rInfo = this.datimToFacility.get(rawDatimCode);
+              if (rInfo) {
+                mapped['Facility'] = rInfo.Facility;
+                mapped['State']    = rInfo.State;
+              }
+            }
+          }
+
+          // Apply categorical filters on mapped values
+          if (catFilters.length > 0 || anyOfFilters.length > 0) {
+            const passedStr: Record<string, unknown> = {};
+            for (const [k, v] of Object.entries(mapped)) passedStr[k] = v;
+            if (catFilters.length > 0 && !this.filterEngine.passesAll(passedStr, catFilters)) continue;
+            if (anyOfFilters.length > 0 && !this.filterEngine.passesAny(passedStr, anyOfFilters)) continue;
+          }
+
+          this.stats.filteredRows += acc.count;
+
+          // Re-group by final (mapped) dimensions only
+          const finalGroupFields = [...new Set([...ind.groupBy, 'AgeBand', 'Sex'])];
+          const finalKeyComps: Record<string, string> = { __period__: mapped['__period__'] };
+          for (const f of finalGroupFields) finalKeyComps[f] = mapped[f] ?? '';
+          const finalKeyStr = JSON.stringify(finalKeyComps);
+
+          if (!finalAcc.has(finalKeyStr)) {
+            finalAcc.set(finalKeyStr, { count: 0, sum: 0, min: Infinity, max: -Infinity, distinctSet: new Set() });
+            finalComps.set(finalKeyStr, finalKeyComps);
+          }
+
+          const fa = finalAcc.get(finalKeyStr)!;
+          fa.count += acc.count;
+          fa.sum   += acc.sum;
+          if (acc.min < fa.min) fa.min = acc.min;
+          if (acc.max > fa.max) fa.max = acc.max;
+          acc.distinctSet.forEach(v => fa.distinctSet.add(v));
+        }
+
+        if (finalAcc.size === 0) {
+          this.logger.warn(`  No rows passed filters for ${ind.name}`);
+          continue;
+        }
+
+        let rowCount = 0;
+        for (const [keyStr, acc] of finalAcc) {
+          const kc    = finalComps.get(keyStr)!;
+          const value = this.resolveAccValue(acc, ind);
+          const row: DashboardRow = {
+            Period:         kc['__period__'] ?? globalPeriod,
+            State:          kc['State']      ?? '',
+            Facility:       kc['Facility']   ?? '',
+            DATIMCode:      kc['DATIMCode']  ?? '',
+            Indicator:      ind.name,
+            Disaggregation: ind.disaggregation ?? 'Total',
+            Category:       kc[ind.disaggregation ?? ''] ?? 'Total',
+            Sex:            kc['Sex']        ?? '',
+            AgeBand:        kc['AgeBand']    ?? '',
+            Value:          value,
+            Numerator:      value,
+            Denominator:    null,
+            Target:         null,
+            AchievementPct: null,
+          };
+          onRow(row);
+          if (formulaInputIndicators.has(ind.name)) formulaInputRows.push(row);
+          rowCount++;
+        }
+
+        this.stats.aggregatedRows += rowCount;
+        this.stats.indicatorsProcessed.push(ind.name);
+        this.logger.info(`  Generated ${rowCount} dashboard rows for ${ind.name}`);
+      }
+    };
+
     // ── SINGLE STREAMING PASS ─────────────────────────────────────────────────
 
     this.logger.info('AggregationEngine: single streaming pass (calibration + processing)…');
@@ -627,28 +802,13 @@ export class AggregationEngine {
           }
         }
       }
+
+      this.logger.info(`  Finished streaming ${sheetName}; finalising its indicators and releasing raw groups...`);
+      const dynamicMappingsForSheet = buildDynamicMappings();
+      finaliseIndicators(indicators, dynamicMappingsForSheet);
+      for (const ind of indicators) rawAccMap.get(ind.name)!.clear();
     }
 
-    // ── Build dynamic mappings from frequency data (same stream = same UIDs) ──
-
-    const dynamicMappings = new Map<string, Map<string, string>>();
-    for (const [col, labels] of Object.entries(this.categoryRanksConfig.categoryRanks)) {
-      const colFreq = freq.get(col);
-      if (!colFreq || colFreq.size === 0) {
-        this.logger.warn(`  Calibration: no values found for column '${col}'`);
-        continue;
-      }
-      const sorted = [...colFreq.entries()].sort((a, b) => b[1] - a[1]);
-      const colMap = new Map<string, string>();
-      for (let i = 0; i < Math.min(labels.length, sorted.length); i++) {
-        const [normVal, count] = sorted[i];
-        colMap.set(normVal, labels[i]);
-        this.logger.info(
-          `  [${col}] rank ${i + 1}: "${normVal}" (n=${count.toLocaleString()}) → "${labels[i]}"`,
-        );
-      }
-      dynamicMappings.set(col, colMap);
-    }
 
     // Log which orgUnits.yaml DATIMs were never seen in this run
     const allKnownDatims = this.orgUnitHelper.getAllDatimCodes();
@@ -681,159 +841,6 @@ export class AggregationEngine {
         this.logger.warn(msg);
         this.addValidationIssue(sheetName, 'N/A', 'Sheet', 'WARNING', msg);
       }
-    }
-
-    // Only keep in memory the rows needed by formula indicators as inputs.
-    // All other rows are streamed immediately via onRow() to avoid OOM.
-    const formulaInputIndicators = new Set<string>();
-    for (const fd of this.indicatorsConfig.formulaIndicators ?? []) {
-      formulaInputIndicators.add(fd.numerator);
-      formulaInputIndicators.add(fd.denominator);
-    }
-    const formulaInputRows: DashboardRow[] = [];
-
-    for (const ind of this.indicatorsConfig.indicators) {
-      this.logger.info(`\n── Finalising indicator: ${ind.name} ──`);
-      const indRaw = rawAccMap.get(ind.name)!;
-
-      if (indRaw.size === 0) {
-        this.logger.warn(`  No rows accumulated for ${ind.name} (all filtered by date range)`);
-        continue;
-      }
-
-      // Categorical filters that apply to mapped values (exclude dateMode)
-      const catFilters   = ind.filters.filter(f => f.operator !== 'dateMode');
-      const anyOfFilters = ind.anyOf ?? [];
-
-      // Final accumulator after mapping + re-grouping
-      const finalAcc  = new Map<string, StreamAcc>();
-      const finalComps = new Map<string, Record<string, string>>();
-
-      let keptGroups = 0;
-
-      for (const [, { rawComponents, acc }] of indRaw) {
-        // ── Map each raw component to a human-readable label ─────────────────
-        const mapped: Record<string, string> = { __period__: rawComponents['__period__'] };
-
-        for (const [field, rawNorm] of Object.entries(rawComponents)) {
-          if (field.startsWith('__')) continue;
-
-          // Dynamic mapping (calibrated in this same streaming pass)
-          if (dynamicMappings.has(field)) {
-            const label = dynamicMappings.get(field)!.get(rawNorm);
-            if (label !== undefined) { mapped[field] = label; continue; }
-          }
-          // Static mappings.yaml fallback
-          if (this.mappingHelper.hasMapping(field)) {
-            mapped[field] = String(this.mappingHelper.map(field, rawNorm));
-          } else {
-            mapped[field] = rawNorm;
-          }
-        }
-
-        // ── Resolve org-unit names from facility DATIM code ────────────────────
-        const datim = rawComponents['__datim__'];
-        if (datim) {
-          const ou = this.orgUnitHelper.lookupByDATIM(datim);
-          if (ou) {
-            if (ou.facility) mapped['Facility'] = ou.facility;
-            if (ou.state)    mapped['State']    = ou.state;
-            if (ou.lga)      mapped['LGA']      = ou.lga;
-          } else {
-            // Fallback: look in the RADET cross-sheet map
-            const rInfo = this.datimToFacility.get(datim);
-            if (rInfo) {
-              mapped['Facility'] = rInfo.Facility;
-              mapped['State']    = rInfo.State;
-            }
-          }
-          mapped['DATIMCode'] = datim;
-        } else {
-          // No valid facility DATIM resolved via orgUnits.yaml.
-          mapped['State']    = '';
-          mapped['Facility'] = '';
-          mapped['LGA']      = '';
-          // Only use __rawDatimCode__ if it is a proper 11-char DATIM UID.
-          // UUIDs (36-char hex) must never appear as DATIMCode in the output.
-          const rawDatimCode = rawComponents['__rawDatimCode__'];
-          const isValidDatim = !!rawDatimCode &&
-            rawDatimCode.length === 11 &&
-            /^[A-Za-z][A-Za-z0-9]{10}$/.test(rawDatimCode);
-          mapped['DATIMCode'] = isValidDatim ? rawDatimCode : '';
-          // If the extracted DATIM resolves via the RADET cross-sheet map, pick up names
-          if (isValidDatim) {
-            const rInfo = this.datimToFacility.get(rawDatimCode);
-            if (rInfo) {
-              mapped['Facility'] = rInfo.Facility;
-              mapped['State']    = rInfo.State;
-            }
-          }
-        }
-
-        // ── Apply categorical filters on mapped values ─────────────────────────
-        if (catFilters.length > 0 || anyOfFilters.length > 0) {
-          const passedStr: Record<string, unknown> = {};
-          for (const [k, v] of Object.entries(mapped)) passedStr[k] = v;
-          if (catFilters.length > 0 && !this.filterEngine.passesAll(passedStr, catFilters)) continue;
-          if (anyOfFilters.length > 0 && !this.filterEngine.passesAny(passedStr, anyOfFilters)) continue;
-        }
-
-        keptGroups++;
-        this.stats.filteredRows += acc.count;
-
-        // ── Re-group by final (mapped) dimensions only ─────────────────────────
-        const finalGroupFields = [...new Set([...ind.groupBy, 'AgeBand', 'Sex'])];
-        const finalKeyComps: Record<string, string> = { __period__: mapped['__period__'] };
-        for (const f of finalGroupFields) finalKeyComps[f] = mapped[f] ?? '';
-        const finalKeyStr = JSON.stringify(finalKeyComps);
-
-        if (!finalAcc.has(finalKeyStr)) {
-          finalAcc.set(finalKeyStr, { count: 0, sum: 0, min: Infinity, max: -Infinity, distinctSet: new Set() });
-          finalComps.set(finalKeyStr, finalKeyComps);
-        }
-
-        const fa = finalAcc.get(finalKeyStr)!;
-        fa.count += acc.count;
-        fa.sum   += acc.sum;
-        if (acc.min < fa.min) fa.min = acc.min;
-        if (acc.max > fa.max) fa.max = acc.max;
-        acc.distinctSet.forEach(v => fa.distinctSet.add(v));
-      }
-
-      if (finalAcc.size === 0) {
-        this.logger.warn(`  No rows passed filters for ${ind.name}`);
-        continue;
-      }
-
-      // ── Emit DashboardRows ─────────────────────────────────────────────────
-      let rowCount = 0;
-      for (const [keyStr, acc] of finalAcc) {
-        const kc    = finalComps.get(keyStr)!;
-        const value = this.resolveAccValue(acc, ind);
-        const row: DashboardRow = {
-          Period:         kc['__period__'] ?? globalPeriod,
-          State:          kc['State']      ?? '',
-          Facility:       kc['Facility']   ?? '',
-          DATIMCode:      kc['DATIMCode']  ?? '',
-          Indicator:      ind.name,
-          Disaggregation: ind.disaggregation ?? 'Total',
-          Category:       kc[ind.disaggregation ?? ''] ?? 'Total',
-          Sex:            kc['Sex']        ?? '',
-          AgeBand:        kc['AgeBand']    ?? '',
-          Value:          value,
-          Numerator:      value,
-          Denominator:    null,
-          Target:         null,
-          AchievementPct: null,
-        };
-        onRow(row);
-        if (formulaInputIndicators.has(ind.name)) formulaInputRows.push(row);
-        rowCount++;
-      }
-
-      this.stats.aggregatedRows += rowCount;
-      this.stats.indicatorsProcessed.push(ind.name);
-      this.logger.info(`  Generated ${rowCount} dashboard rows for ${ind.name}`);
     }
 
     // ── Formula indicators ────────────────────────────────────────────────────
@@ -871,13 +878,18 @@ export class AggregationEngine {
     defs: ComputedColumnDef[],
   ): void {
     for (const def of defs) {
-      if (def.formula !== 'dateAdd') continue;
-      const baseDate = this.dateHelper.parse(record[def.sourceColumn]);
-      if (!baseDate) continue;
-      const addRaw = record[def.addColumn];
-      const addNum = typeof addRaw === 'number' ? addRaw : parseFloat(String(addRaw ?? ''));
-      if (isNaN(addNum) || addNum <= 0) continue;
-      record[def.name] = baseDate.add(addNum, def.unit).toDate();
+      if (def.formula === 'dateAdd') {
+        const baseDate = this.dateHelper.parse(record[def.sourceColumn!]);
+        if (!baseDate) continue;
+        const addRaw = record[def.addColumn!];
+        const addNum = typeof addRaw === 'number' ? addRaw : parseFloat(String(addRaw ?? ''));
+        if (isNaN(addNum) || addNum <= 0) continue;
+        record[def.name] = baseDate.add(addNum, def.unit!).toDate();
+      } else if (def.formula === 'ifNotNull') {
+        const checkVal = record[def.ifNotNull!];
+        const hasValue = checkVal !== null && checkVal !== undefined && String(checkVal).trim() !== '';
+        record[def.name] = hasValue ? record[def.then!] : record[def.else!];
+      }
     }
   }
 
