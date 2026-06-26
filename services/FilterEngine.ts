@@ -124,11 +124,14 @@ export class FilterEngine {
         const helper = this.getDateHelper(filter.column);
         const d = helper.parse(raw);
         if (!d) return false;
-        if (value === 'Before180DaysAgo') {
-          return d.isSameOrBefore(helper.getToday().subtract(180, 'day'), 'day');
-        }
         const range = value === 'CurrentFY'
           ? helper.getPEPFARFiscalYearRange()
+          : value === 'PreviousSemiQuarter'
+          ? helper.getPreviousSemiQuarterRange()
+          : value === 'CurrentSemiQuarter'
+          ? helper.getCurrentSemiQuarterRange()
+          : value === 'Before180DaysAgo'
+          ? helper.getBefore180DaysAgoRange()
           : helper.getRange();
         return d.isBetween(range.start, range.end, 'day', '[]');
       }

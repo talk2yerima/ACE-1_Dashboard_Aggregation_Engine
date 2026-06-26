@@ -1,4 +1,4 @@
-# install_service.ps1
+﻿# install_service.ps1
 # Installs the RADET Dashboard Aggregation Engine as a Windows Service using NSSM.
 # Double-click or run from any PowerShell window - auto-elevates to Admin.
 
@@ -175,6 +175,6 @@ Write-Host ""
 Write-Host "Logs:"
 Write-Host "  Get-Content '$LogDir\RADET_stdout.log' -Tail 50 -Wait"
 Write-Host ""
-Write-Host "Schedule: 09:00  11:00  13:00  15:00  17:00  19:00  21:00  (daily)"
+Write-Host "Schedule: 04:50  06:51  08:51  10:51  12:51  14:51  16:51  18:51  20:51  22:51  (daily)"
 Write-Host "Startup : Runs immediately once when service starts/restarts"
 Read-Host "Press Enter to close"

@@ -1,4 +1,4 @@
-@echo off
+﻿@echo off
 REM ============================================================
 REM  setup.bat  -  Setup for RADET Dashboard Engine
 REM  Double-click to install. Requires internet connection.
@@ -92,7 +92,7 @@ echo ============================================
 echo.
 echo  Service name : RADET_Dashboard_Engine
 echo  First run    : Immediately when service starts/restarts
-echo  Schedule     : 09:00  11:00  13:00  15:00  17:00  19:00  21:00
+echo  Schedule     : 04:50  06:51  08:51  10:51  12:51  14:51  16:51  18:51  20:51  22:51
 echo  Logs         : %~dp0logs\RADET_stdout.log
 echo.
 echo  Useful commands (run from this folder):

@@ -350,23 +350,58 @@ async function main(): Promise<void> {
     logger.info(`  Uploaded: ${blobName} (${(fileSize / 1024).toFixed(1)} KB) -> ${containerName}`);
   }
 
-  if (rowCount > 0 && connectionString && dashboardWorkbookPath) {
-    try {
-      logger.info(`\nUploading dashboard workbook to Azure Blob Storage (${containerName})...`);
-      await uploadFileToBlob(dashboardWorkbookPath, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    } catch (err) {
-      logger.error(`  Blob upload failed: ${String(err)}`);
-    }
-  } else if (rowCount > 0 && connectionString && !dashboardWorkbookPath) {
-    logger.warn('  Dashboard workbook was not created — skipping blob upload.');
-  } else if (rowCount > 0 && !connectionString) {
-    logger.warn('  AZURE_STORAGE_CONNECTION_STRING not set — skipping blob upload.');
+  // ── Validation Report ─────────────────────────────────────────────────────
+  let validationReportPath: string | null = null;
+  if (engine.validationIssues.length > 0) {
+    validationReportPath = await writer.writeValidationReport(engine.validationIssues);
+    logger.warn(`\nValidation issues found. Report: ${validationReportPath}`);
   }
 
-  // â”€â”€ Validation Report â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  if (engine.validationIssues.length > 0) {
-    const reportPath = await writer.writeValidationReport(engine.validationIssues);
-    logger.warn(`\nValidation issues found. Report: ${reportPath}`);
+  // ── Upload CSV + XLSX together ─────────────────────────────────────────────
+  if (rowCount > 0 && connectionString) {
+    const filesToUpload: Array<{ filePath: string; contentType: string }> = [];
+    if (fs.existsSync(csvPath)) {
+      filesToUpload.push({ filePath: csvPath, contentType: 'text/csv' });
+    }
+    if (dashboardWorkbookPath && fs.existsSync(dashboardWorkbookPath)) {
+      filesToUpload.push({ filePath: dashboardWorkbookPath, contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    }
+
+    logger.info(`\nUploading ${filesToUpload.length} file(s) to Azure Blob Storage (${containerName})...`);
+    let allUploaded = true;
+    for (const { filePath, contentType } of filesToUpload) {
+      try {
+        await uploadFileToBlob(filePath, contentType);
+      } catch (err) {
+        logger.error(`  Upload failed [${path.basename(filePath)}]: ${String(err)}`);
+        allUploaded = false;
+      }
+    }
+
+    // ── Clear outputs after successful upload ──────────────────────────────
+    // Only process.log is kept — everything else is deleted to save disk space.
+    if (allUploaded) {
+      logger.info('\nClearing output files after successful upload...');
+      const toDelete = [
+        csvPath,
+        targetCsvPath,
+        dashboardWorkbookPath,
+        validationReportPath,
+      ].filter((p): p is string => !!p && fs.existsSync(p));
+
+      for (const filePath of toDelete) {
+        try {
+          fs.unlinkSync(filePath);
+          logger.info(`  Deleted: ${path.basename(filePath)}`);
+        } catch (err) {
+          logger.warn(`  Could not delete ${path.basename(filePath)}: ${String(err)}`);
+        }
+      }
+    } else {
+      logger.warn('  Some uploads failed — output files kept for inspection.');
+    }
+  } else if (rowCount > 0 && !connectionString) {
+    logger.warn('  AZURE_STORAGE_CONNECTION_STRING not set — skipping blob upload.');
   }
 
   // â”€â”€ Final Stats â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€

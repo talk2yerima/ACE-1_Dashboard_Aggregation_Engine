@@ -1496,7 +1496,7 @@ indicators:
     disaggregation: Sex
 
   - name: TX_New_TB_Negative
-    description: "New ART patients (non-transfer) who were TB-screened and found negative"
+    description: "New ART patients (non-Transfer-in) who were TB-screened and found negative"
     source: CombinedRADET
     periodColumn: ARTStartDate
     requiredColumns:
@@ -1514,11 +1514,11 @@ indicators:
         value: DAILY
       - column: CareEntryPoint
         operator: notContains
-        value: "transfer"
+        value: "Transfer-in"
         caseSensitive: false
       - column: TBStatus
         operator: equals
-        value: "Not a TB Case"
+        value: "No signs or symptoms of TB"
         caseSensitive: false
     groupBy:
       - Facility
@@ -1530,7 +1530,7 @@ indicators:
     disaggregation: Sex
 
   - name: TX_New_Started_TPT
-    description: "New ART patients (non-transfer) who started TB Preventive Therapy"
+    description: "New ART patients (non-Transfer-in) who started TB Preventive Therapy"
     source: CombinedRADET
     periodColumn: ARTStartDate
     requiredColumns:
@@ -1549,7 +1549,7 @@ indicators:
         value: DAILY
       - column: CareEntryPoint
         operator: notContains
-        value: "transfer"
+        value: "Transfer-in"
         caseSensitive: false
       - column: DateOfTPTStart
         operator: isNotNull
@@ -1592,7 +1592,7 @@ indicators:
     disaggregation: Sex
 
   - name: Care New_Presumptive_TB
-    description: "New ART patients (non-transfer) with Presumptive TB"
+    description: "New ART patients (non-Transfer-in) with Presumptive TB"
     source: CombinedRADET
     periodColumn: ARTStartDate
     requiredColumns:
@@ -1610,7 +1610,7 @@ indicators:
         value: DAILY
       - column: CareEntryPoint
         operator: notContains
-        value: "transfer"
+        value: "Transfer-in"
         caseSensitive: false
       - column: TBStatus
         operator: equals
@@ -3999,6 +3999,17 @@ formulaIndicators:
       - DATIMCode
       - State
 
+  - name: TX_New_TB_Tx_Gap
+    description: "Gap between TX_New clients who tested TB positive and those who started TB treatment"
+    numerator: TX_New_TB_Positive
+    denominator: TX_New_TB_TX_Started
+    formula: "numerator - denominator"
+    outputType: count
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+
   - name: Suppression_Rate
     description: "Proportion of patients with VL results who are virally suppressed (< 1000 copies/mL)"
     numerator: PVLSN
@@ -4020,3 +4031,506 @@ formulaIndicators:
       - Facility
       - DATIMCode
       - State
+
+  # ── PMTCT HTS (Facility — all settings) ──────────────────────────────────────
+
+  - name: PMTCT_HTS
+    description: "Individuals who received HTS in a PMTCT setting (ANC, Outreach, Spoke health facility, TBAs)"
+    source: CombinedHTS
+    periodColumn: DateOfHIVTesting
+    requiredColumns:
+      - DateOfHIVTesting
+      - TestingSetting
+      - PregnancyStatus
+      - Sex
+      - Age
+      - DATIMCode
+    filters:
+      - column: DateOfHIVTesting
+        operator: dateMode
+        value: DAILY
+      - column: TestingSetting
+        operator: inList
+        value:
+          - "TBA rt-HCW"
+          - "ANC"
+          - "Outreach"
+          - "Spoke health facility"
+          - "TBA Orthodox"
+        caseSensitive: false
+      - column: Sex
+        operator: equals
+        value: "Female"
+        caseSensitive: false
+      - column: PregnancyStatus
+        operator: equals
+        value: "Pregnant"
+        caseSensitive: false
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  # ── PMTCT HTS Community ────────────────────────────────────────────────────────
+
+  - name: PMTCT_HTS_Community
+    description: "Individuals who received HTS in a PMTCT community setting (TBA rt-HCW, Outreach, Spoke health facility, TBA Orthodox)"
+    source: CombinedHTS
+    periodColumn: DateOfHIVTesting
+    requiredColumns:
+      - DateOfHIVTesting
+      - TestingSetting
+      - EntryPoint
+      - PregnancyStatus
+      - Sex
+      - Age
+      - DATIMCode
+    filters:
+      - column: DateOfHIVTesting
+        operator: dateMode
+        value: DAILY
+      - column: EntryPoint
+        operator: equals
+        value: "Community"
+        caseSensitive: false
+      - column: TestingSetting
+        operator: inList
+        value:
+          - "TBA rt-HCW"
+          - "Outreach"
+          - "Spoke health facility"
+          - "TBA Orthodox"
+        caseSensitive: false
+      - column: Sex
+        operator: equals
+        value: "Female"
+        caseSensitive: false
+      - column: PregnancyStatus
+        operator: equals
+        value: "Pregnant"
+        caseSensitive: false
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  # ── PMTCT HTS POS Community ────────────────────────────────────────────────────
+
+  - name: PMTCT_HTS_POS_Community
+    description: "Individuals who received positive HTS results in a PMTCT community setting (TBA rt-HCW, Outreach, Spoke health facility, TBA Orthodox)"
+    source: CombinedHTS
+    periodColumn: DateOfHIVTesting
+    requiredColumns:
+      - DateOfHIVTesting
+      - TestingSetting
+      - EntryPoint
+      - PregnancyStatus
+      - FinalHIVTestResult
+      - Sex
+      - Age
+      - DATIMCode
+    filters:
+      - column: DateOfHIVTesting
+        operator: dateMode
+        value: DAILY
+      - column: EntryPoint
+        operator: equals
+        value: "Community"
+        caseSensitive: false
+      - column: TestingSetting
+        operator: inList
+        value:
+          - "TBA rt-HCW"
+          - "Outreach"
+          - "Spoke health facility"
+          - "TBA Orthodox"
+        caseSensitive: false
+      - column: FinalHIVTestResult
+        operator: equals
+        value: "Positive"
+        caseSensitive: false
+      - column: Sex
+        operator: equals
+        value: "Female"
+        caseSensitive: false
+      - column: PregnancyStatus
+        operator: equals
+        value: "Pregnant"
+        caseSensitive: false
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  # ── PMTCT Previously Known ─────────────────────────────────────────────────────
+  # source: CombineMaternal (NOT CombinedHTS) — reads the maternal cohort sheet.
+
+  - name: PMTCT_Previously_Known
+    description: "HIV positive individuals previously known positive — on ART prior to this pregnancy (CombineMaternal sheet)"
+    source: CombineMaternal
+    periodColumn: DateofInitialVisit
+    requiredColumns:
+      - TimingofARTinitiationinmother
+      - DateofInitialVisit
+      - Sex
+      - Age
+      - DATIMCode
+    filters:
+      - column: DateofInitialVisit
+        operator: dateMode
+        value: DAILY
+      - column: TimingofARTinitiationinmother
+        operator: equals
+        value: "Prior to this pregnancy"
+        caseSensitive: false
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  # ── TB_PREV Numerator ──────────────────────────────────────────────────────────
+
+  - name: TB_PREV_N
+    description: "TB_PREV Numerator — PLHIV on ART who completed TPT (initiated previous semi-annual, completed current semi-annual)"
+    source: CombinedRADET
+    periodColumn: TPTCompletionDate
+    requiredColumns:
+      - CurrentARTStatus
+      - DateOfTPTStart
+      - TPTCompletionDate
+      - TPTCompletionStatus
+      - TPTType
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - Age
+    filters:
+      - column: CurrentARTStatus
+        operator: inList
+        value:
+          - "Active"
+          - "Active Restart"
+        caseSensitive: false
+      - column: DateOfTPTStart
+        operator: dateinRange
+        value: PreviousSemiQuarter
+      - column: TPTCompletionDate
+        operator: dateinRange
+        value: CurrentSemiQuarter
+      - column: TPTCompletionStatus
+        operator: contains
+        value: "complete"
+        caseSensitive: false
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+      - TPTType
+    aggregation: COUNT
+    disaggregation: Sex
+
+  # ── TB_PREV Denominator ────────────────────────────────────────────────────────
+
+  - name: TB_PREV_D
+    description: "TB_PREV Denominator — ART patients who initiated TPT during the previous semi-annual reporting period"
+    source: CombinedRADET
+    periodColumn: DateOfTPTStart
+    requiredColumns:
+      - CurrentARTStatus
+      - DateOfTPTStart
+      - TPTType
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - Age
+    filters:
+      - column: CurrentARTStatus
+        operator: inList
+        value:
+          - "Active"
+          - "Active Restart"
+        caseSensitive: false
+      - column: DateOfTPTStart
+        operator: dateinRange
+        value: PreviousSemiQuarter
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+      - TPTType
+    aggregation: COUNT
+    disaggregation: Sex
+
+  # ── Transfer-in ────────────────────────────────────────────────────────────────
+
+  - name: Transfer_In
+    description: "Patients who enrolled via transfer-in, by date of registration"
+    source: CombinedRADET
+    periodColumn: DateOfRegistration
+    requiredColumns:
+      - DateOfRegistration
+      - CareEntryPoint
+      - Sex
+      - Age
+      - Facility
+      - DATIMCode
+      - State
+    filters:
+      - column: DateOfRegistration
+        operator: dateMode
+        value: DAILY
+      - column: CareEntryPoint
+        operator: equals
+        value: "Transfer-in"
+        caseSensitive: false
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  # ── TB Cascade — new indicators ───────────────────────────────────────────────
+
+  - name: TX_New_TB_Positive
+    description: "New ART patients (non-Transfer-in) whose TB diagnostic result was Positive"
+    source: CombinedRADET
+    periodColumn: ARTStartDate
+    requiredColumns:
+      - ARTStartDate
+      - CareEntryPoint
+      - TBDiagnosticResult
+      - Sex
+      - Age
+      - Facility
+      - DATIMCode
+      - State
+    filters:
+      - column: ARTStartDate
+        operator: dateMode
+        value: DAILY
+      - column: CareEntryPoint
+        operator: notContains
+        value: "Transfer-in"
+        caseSensitive: false
+      - column: TBDiagnosticResult
+        operator: inList
+        value:
+          - "Positive"
+          - "X-ray suggestive"
+          - "MTB detected RIF resistance not detected"
+          - "MTB detected RIF resistance detected"
+          - "Suggestive for TB"
+          - "MTB Detected (Rifampicin Resistance Detected)"
+          - "MTB Detected (Rifampicin not Resistance)"
+          - "P0sitive"
+          - "AFB Positive"
+          - "MTB trace RIF resistance indeterminate"
+          - "MTB detected RR not detected"
+          - "Detected"
+          - "TB POSITIVE"
+          - "+"
+          - "MTB detected RR detected"
+        caseSensitive: false
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: TX_New_TB_TX_Started
+    description: "New ART patients (non-Transfer-in) with TB positive result who started TB treatment"
+    source: CombinedRADET
+    periodColumn: ARTStartDate
+    requiredColumns:
+      - ARTStartDate
+      - CareEntryPoint
+      - TBDiagnosticResult
+      - TBTreatmentStartDate
+      - Sex
+      - Age
+      - Facility
+      - DATIMCode
+      - State
+    filters:
+      - column: ARTStartDate
+        operator: dateMode
+        value: DAILY
+      - column: CareEntryPoint
+        operator: notContains
+        value: "Transfer-in"
+        caseSensitive: false
+      - column: TBDiagnosticResult
+        operator: inList
+        value:
+          - "Positive"
+          - "X-ray suggestive"
+          - "MTB detected RIF resistance not detected"
+          - "MTB detected RIF resistance detected"
+          - "Suggestive for TB"
+          - "MTB Detected (Rifampicin Resistance Detected)"
+          - "MTB Detected (Rifampicin not Resistance)"
+          - "P0sitive"
+          - "AFB Positive"
+          - "MTB trace RIF resistance indeterminate"
+          - "MTB detected RR not detected"
+          - "Detected"
+          - "TB POSITIVE"
+          - "+"
+          - "MTB detected RR detected"
+        caseSensitive: false
+      - column: TBTreatmentStartDate
+        operator: isNotNull
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: TB_Scrn_TX_CURR
+    description: "Active ART patients (TX_CURR) screened for TB"
+    source: CombinedRADET
+    periodColumn: DateOfTBScreening
+    requiredColumns:
+      - CurrentARTStatus
+      - DateOfTBScreening
+      - Sex
+      - Age
+      - Facility
+      - DATIMCode
+      - State
+    filters:
+      - column: CurrentARTStatus
+        operator: inList
+        value:
+          - "Active"
+          - "Active Restart"
+        caseSensitive: false
+      - column: DateOfTBScreening
+        operator: dateMode
+        value: TODAY
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: Presumptive_TB_TX_CURR
+    description: "Active ART patients (TX_CURR) identified with Presumptive TB"
+    source: CombinedRADET
+    periodColumn: DateOfTBScreening
+    requiredColumns:
+      - CurrentARTStatus
+      - DateOfTBScreening
+      - TBStatus
+      - Sex
+      - Age
+      - Facility
+      - DATIMCode
+      - State
+    filters:
+      - column: CurrentARTStatus
+        operator: inList
+        value:
+          - "Active"
+          - "Active Restart"
+        caseSensitive: false
+      - column: DateOfTBScreening
+        operator: dateMode
+        value: TODAY
+      - column: TBStatus
+        operator: equals
+        value: "Presumptive TB"
+        caseSensitive: false
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: TB_Positive
+    description: "Active ART patients (TX_CURR) whose TB diagnostic result was Positive"
+    source: CombinedRADET
+    periodColumn: DateOfTBResultReturn
+    requiredColumns:
+      - CurrentARTStatus
+      - TBDiagnosticResult
+      - DateOfTBResultReturn
+      - Sex
+      - Age
+      - Facility
+      - DATIMCode
+      - State
+    filters:
+      - column: CurrentARTStatus
+        operator: inList
+        value:
+          - "Active"
+          - "Active Restart"
+        caseSensitive: false
+      - column: TBDiagnosticResult
+        operator: inList
+        value:
+          - "Positive"
+          - "X-ray suggestive"
+          - "MTB detected RIF resistance not detected"
+          - "MTB detected RIF resistance detected"
+          - "Suggestive for TB"
+          - "MTB Detected (Rifampicin Resistance Detected)"
+          - "MTB Detected (Rifampicin not Resistance)"
+          - "P0sitive"
+          - "AFB Positive"
+          - "MTB trace RIF resistance indeterminate"
+          - "MTB detected RR not detected"
+          - "Detected"
+          - "TB POSITIVE"
+          - "+"
+          - "MTB detected RR detected"
+        caseSensitive: false
+      - column: DateOfTBResultReturn
+        operator: dateMode
+        value: TODAY
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
