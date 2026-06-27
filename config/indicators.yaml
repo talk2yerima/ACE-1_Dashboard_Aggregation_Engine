@@ -3741,30 +3741,54 @@ indicators:
     disaggregation: Sex
 
   - name: PMTCT_ART_New
-    description: "Pregnant women newly initiated on ART during the current pregnancy"
-    source: CombineMaternal
-    periodColumn: Date of Initial Visit
+    description: Pregnant women (age >= 10) at PMTCT settings this FY confirmed to have started ART (verified via RADET ARTStartDate)
+    source: CombinedHTS
+    periodColumn: DateOfHIVTesting
     requiredColumns:
+      - PatientId
       - DATIMCode
-      - Date of Initial Visit
-      - Timing of ART initiation in mother
-      - Age
+      - DateVisit
+      - DateOfHIVTesting
+      - TestingSetting
+      - PregnancyStatus
       - Sex
+      - Age
+      - State
     filters:
-      - column: Date of Initial Visit
-        operator: dateMode
-        value: DAILY
-      - column: Timing of ART initiation in mother
+      - column: DateVisit
+        operator: dateinRange
+        value: CurrentFY
+      - column: DateOfHIVTesting
+        operator: dateinRange
+        value: CurrentFY
+      - column: TestingSetting
         operator: inList
         value:
-          - "initiated art during pregnancy < 36 weeks gestation period"
-          - "initiated art during pregnancy > 36 weeks gestation period"
-          - "initiated art during pregnancy <36 weeks gestation period"
-          - "initiated art during pregnancy ≥ 36 weeks gestation period"
-          - "initiated art during pregnancy ≥36 weeks gestation period"
-          - "initiated art during pregnancy >= 36 weeks gestation period"
-          - "initiated art during pregnancy >=36 weeks gestation period"
+          - ANC
+          - L&D
+          - Outreach
+          - Spoke health facility
+          - TBA Orthodox
+          - TBA rt-HCW
         caseSensitive: false
+      - column: PregnancyStatus
+        operator: equals
+        value: Pregnant
+        caseSensitive: false
+      - column: Sex
+        operator: equals
+        value: Female
+        caseSensitive: false
+      - column: Age
+        operator: greaterThanOrEqual
+        value: 10
+    crossSheetLookup:
+      fromSheet: CombinedRADET
+      fromColumn: PatientId
+      matchColumn: PatientId
+      lookupFilters:
+        - column: ARTStartDate
+          operator: isNotNull
     groupBy:
       - Facility
       - DATIMCode
@@ -3775,30 +3799,51 @@ indicators:
     disaggregation: Sex
 
   - name: PMTCT_STAT_New_Pos
-    description: "Women newly tested HIV-positive at ANC or Spoke Health Facility"
+    description: Pregnant women (age >= 10) newly tested HIV-positive at PMTCT settings this fiscal year
     source: CombinedHTS
     periodColumn: DateOfHIVTesting
     requiredColumns:
       - DATIMCode
+      - DateVisit
       - DateOfHIVTesting
       - TestingSetting
       - FinalHIVTestResult
+      - PregnancyStatus
       - Sex
       - Age
+      - State
     filters:
+      - column: DateVisit
+        operator: dateinRange
+        value: CurrentFY
       - column: DateOfHIVTesting
-        operator: dateMode
-        value: DAILY
+        operator: dateinRange
+        value: CurrentFY
       - column: TestingSetting
         operator: inList
         value:
-          - "ANC"
-          - "Spoke Health Facility"
+          - ANC
+          - L&D
+          - Outreach
+          - Spoke health facility
+          - TBA Orthodox
+          - TBA rt-HCW
         caseSensitive: false
       - column: FinalHIVTestResult
         operator: equals
-        value: "Positive"
+        value: Positive
         caseSensitive: false
+      - column: PregnancyStatus
+        operator: equals
+        value: Pregnant
+        caseSensitive: false
+      - column: Sex
+        operator: equals
+        value: Female
+        caseSensitive: false
+      - column: Age
+        operator: greaterThanOrEqual
+        value: 10
     groupBy:
       - Facility
       - DATIMCode
@@ -3809,33 +3854,54 @@ indicators:
     disaggregation: Sex
 
   - name: PMTCT_STAT_New_Neg
-    description: "Women newly tested HIV-negative or non-reactive at ANC or Spoke Health Facility"
+    description: Pregnant women (age >= 10) newly tested HIV-negative at PMTCT settings this fiscal year
     source: CombinedHTS
     periodColumn: DateOfHIVTesting
     requiredColumns:
       - DATIMCode
+      - DateVisit
       - DateOfHIVTesting
       - TestingSetting
       - FinalHIVTestResult
+      - PregnancyStatus
       - Sex
       - Age
+      - State
     filters:
+      - column: DateVisit
+        operator: dateinRange
+        value: CurrentFY
       - column: DateOfHIVTesting
-        operator: dateMode
-        value: DAILY
+        operator: dateinRange
+        value: CurrentFY
       - column: TestingSetting
         operator: inList
         value:
-          - "ANC"
-          - "Spoke Health Facility"
+          - ANC
+          - L&D
+          - Outreach
+          - Spoke health facility
+          - TBA Orthodox
+          - TBA rt-HCW
         caseSensitive: false
       - column: FinalHIVTestResult
         operator: inList
         value:
-          - "Negative"
-          - "Non Reactive"
-          - "Non-Reactive"
+          - Negative
+          - Non Reactive
+          - Non-Reactive
         caseSensitive: false
+      - column: PregnancyStatus
+        operator: equals
+        value: Pregnant
+        caseSensitive: false
+      - column: Sex
+        operator: equals
+        value: Female
+        caseSensitive: false
+      - column: Age
+        operator: greaterThanOrEqual
+        value: 10
     groupBy:
       - Facility
       - DATIMCode
