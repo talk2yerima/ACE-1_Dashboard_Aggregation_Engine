@@ -21,7 +21,8 @@ export interface FilterDef {
     | 'isNotNull'
     | 'isNull'
     | 'equalsColumn'
-    | 'notEqualsColumn';
+    | 'notEqualsColumn'
+    | 'viralLoadSuppressed';
   value?: unknown;
   /** For equalsColumn / notEqualsColumn: the other column name to compare against */
   valueColumn?: string;
@@ -185,6 +186,9 @@ export class FilterEngine {
         return this.normalizeStr(raw, caseSensitive) !== this.normalizeStr(other, caseSensitive);
       }
 
+      case 'viralLoadSuppressed':
+        return this.isViralLoadSuppressed(raw);
+
       default:
         this.logger.warn(`Unknown filter operator: ${operator}`);
         return true;
@@ -198,10 +202,68 @@ export class FilterEngine {
 
   private toNum(val: unknown): number {
     if (typeof val === 'number') return val;
-    const s = String(val ?? '').trim().toLowerCase();
-    // LDL ("Lower than Detection Level") and equivalent text = effectively 0 copies/mL
-    if (s === 'ldl' || s === 'undetectable' || s === 'target not detected' || s === 'tnd') return 0;
+    const s = String(val ?? '').trim().toLowerCase().replace(/\s+/g, ' ');
+
+    // All known text forms of "undetectable / below limit of detection"
+    // map to 0 so numeric comparisons (lessThan 1000) work correctly.
+    if (VL_SUPPRESSED_TEXT.has(s)) return 0;
+
+    // "< N" or "<N" patterns (e.g. "<20", "< 30") — the VL is below N,
+    // so treat as 0 for comparison purposes.
+    const ltMatch = s.match(/^<\s*(\d+(?:\.\d+)?)$/);
+    if (ltMatch) return 0;
+
     // Strip thousand separators (e.g. "1,936" → 1936) before parsing
     return parseFloat(s.replace(/,/g, ''));
   }
+
+  /**
+   * Returns true when a raw viral load value represents a suppressed or
+   * undetectable result.  Handles all DHIS2 / lab system variants seen in
+   * RADET exports:
+   *   numeric:   0, 0.0, 0.00  (and any value < 1 000 copies/mL)
+   *   less-than: <20, < 20, <30, < 30  (any "<N" where N ≤ 1 000)
+   *   text:      Not Detected, NotDetected, TargetNotDetected,
+   *              Target Not Detected, < Titermin, LDL, TND, Undetectable …
+   */
+  private isViralLoadSuppressed(val: unknown): boolean {
+    if (val === null || val === undefined || val === '') return false;
+    const s = String(val).trim().toLowerCase().replace(/\s+/g, ' ');
+
+    if (VL_SUPPRESSED_TEXT.has(s)) return true;
+
+    // "<N" patterns — suppressed if threshold ≤ 1 000
+    const ltMatch = s.match(/^<\s*(\d+(?:\.\d+)?)$/);
+    if (ltMatch) return parseFloat(ltMatch[1]) <= 1000;
+
+    // Numeric — suppressed if < 1 000
+    const n = parseFloat(s.replace(/,/g, ''));
+    return !isNaN(n) && n < 1000;
+  }
 }
+
+// ── Viral load: all known text representations of "undetectable / suppressed" ──
+const VL_SUPPRESSED_TEXT = new Set([
+  // Standard English
+  'not detected',
+  'notdetected',
+  'target not detected',
+  'targetnotdetected',
+  'tnd',
+  'ldl',                       // lower than detection level
+  'undetectable',
+  'undetected',
+  'below detection',
+  'bdl',                       // below detection limit
+  'below limit of detection',
+  'blod',
+  // Lab-system variants
+  '< titermin',                // below titration minimum
+  '<titermin',
+  'titermin',
+  'below lod',
+  'b.d.',
+  'b.d',
+  'nd',                        // not detected (abbreviated)
+]);
+
