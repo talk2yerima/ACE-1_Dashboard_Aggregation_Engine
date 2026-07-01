@@ -9,7 +9,7 @@ import { OutputWriter } from './services/OutputWriter';
 import { TargetService } from './services/TargetService';
 import { WorkbookReportWriter } from './services/WorkbookReportWriter';
 import { EdctService } from './services/EdctService';
-import { DateModeConfig } from './helpers/DateHelper';
+import { DateHelper, DateModeConfig } from './helpers/DateHelper';
 
 // â”€â”€â”€ Logger Setup â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
@@ -295,8 +295,9 @@ async function main(): Promise<void> {
     const connected   = await edctService.testConnection();
     if (connected) {
       try {
-        const edctSqlPath = path.resolve(process.cwd(), 'scripts', 'edct_query.sql');
-        const edctRows: DashboardRow[] = await edctService.fetchDashboardRows(edctSqlPath);
+        const edctSqlPath  = path.resolve(process.cwd(), 'scripts', 'edct_query.sql');
+        const edctDateRange = new DateHelper(dateModeConfig).getRange();
+        const edctRows: DashboardRow[] = await edctService.fetchDashboardRows(edctSqlPath, edctDateRange);
         for (const row of edctRows) {
           writer.writeCsvRow(csvStream, row);
           rowCount++;

@@ -1,8 +1,13 @@
 import fs from 'fs';
 import { Pool, PoolConfig } from 'pg';
-import dayjs from 'dayjs';
+import dayjs, { Dayjs } from 'dayjs';
 import type { Logger } from 'winston';
 import { DashboardRow } from './AggregationEngine';
+
+export interface EdctDateRange {
+  start: Dayjs;
+  end:   Dayjs;
+}
 
 interface EdctDbRow {
   Section:       string;
@@ -83,12 +88,15 @@ export class EdctService {
     }
   }
 
-  async fetchDashboardRows(sqlPath: string): Promise<DashboardRow[]> {
+  async fetchDashboardRows(sqlPath: string, dateRange: EdctDateRange): Promise<DashboardRow[]> {
     const sql  = fs.readFileSync(sqlPath, 'utf8');
     const pool = new Pool(this.config);
+    const rangeStart = dateRange.start.toISOString();
+    const rangeEnd   = dateRange.end.toISOString();
+    this.logger.info(`  EDCT date range: ${dateRange.start.format('YYYY-MM-DD')} → ${dateRange.end.format('YYYY-MM-DD')}`);
     try {
       this.logger.info('Querying EDCT data from PostgreSQL...');
-      const result = await pool.query<EdctDbRow>(sql);
+      const result = await pool.query<EdctDbRow>(sql, [rangeStart, rangeEnd]);
       this.logger.info(`  EDCT query returned ${result.rows.length} rows`);
       return result.rows.map(row => this.mapRow(row));
     } finally {
