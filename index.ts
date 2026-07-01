@@ -296,7 +296,7 @@ async function main(): Promise<void> {
     if (connected) {
       try {
         const edctSqlPath  = path.resolve(process.cwd(), 'scripts', 'edct_query.sql');
-        const edctDateRange = new DateHelper(dateModeConfig).getRange();
+        const edctDateRange = new DateHelper(dateModeConfig).getGroupByDateRange();
         const edctRows: DashboardRow[] = await edctService.fetchDashboardRows(edctSqlPath, edctDateRange);
         for (const row of edctRows) {
           writer.writeCsvRow(csvStream, row);
