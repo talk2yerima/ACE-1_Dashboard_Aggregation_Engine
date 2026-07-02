@@ -2373,6 +2373,46 @@ indicators:
     aggregation: COUNT
     disaggregation: Sex
 
+  - name: PVLSN_Daily
+    description: "ART patients with suppressed VL (<1,000 copies/ml) on ART >= 6 months (numerator) Daily"
+    source: CombinedRADET
+    periodColumn: DateOfCurrentVLResultSample
+    requiredColumns:
+      - CurrentARTStatus
+      - CurrentViralLoad
+      - DateOfCurrentVLResultSample
+      - ARTStartDate
+      - Sex
+      - Age
+      - Facility
+      - DATIMCode
+      - State
+    filters:
+      - column: CurrentARTStatus
+        operator: inList
+        value:
+          - "Active"
+          - "Active Restart"
+        caseSensitive: false
+      - column: CurrentViralLoad
+        operator: lessThan
+        value: 1000
+      - column: DateOfCurrentVLResultSample
+        operator: dateMode
+        value: DAILY
+      - column: DateOfCurrentVLResultSample
+        operator: dateDiff
+        ref: ARTStartDate
+        value: ">= 180"
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
   - name: VL Result Received_PVLSD
     description: "ART patients with documented VL result on ART >= 6 months (denominator)"
     source: CombinedRADET
@@ -2911,26 +2951,29 @@ indicators:
       - DateOfCurrentViralLoad
       - CurrentViralLoad
       - CurrentARTStatus
+      - DateOfCurrentVLResultSample
+      - ARTStartDate
       - Sex
       - Age
       - Facility
       - DATIMCode
       - State
     filters:
-      - column: DateOfCurrentViralLoad
-        operator: dateMode
-        value: DAILY
-      - column: CurrentViralLoad
-        operator: isNotNull
-      - column: CurrentViralLoad
-        operator: greaterThanOrEqual
-        value: 1000
       - column: CurrentARTStatus
         operator: inList
         value:
           - "Active"
           - "Active Restart"
         caseSensitive: false
+      - column: CurrentViralLoad
+        operator: greaterThanOrEqual
+        value: 1000
+      - column: DateOfCurrentVLResultSample
+        operator: isNotNull
+      - column: DateOfCurrentVLResultSample
+        operator: dateDiff
+        ref: ARTStartDate
+        value: ">= 180"
     groupBy:
       - Facility
       - DATIMCode
@@ -3052,57 +3095,61 @@ indicators:
   #   aggregation: COUNT
   #   disaggregation: Sex
   #
-  # - name: EAC_Completed
-  #   description: "Patients who completed all EAC sessions (extended EAC) in the current FY"
-  #   source: CombinedRADET
-  #   periodColumn: DateOfExtendedEACCompletion
-  #   requiredColumns:
-  #     - DateOfExtendedEACCompletion
-  #     - Sex
-  #     - Age
-  #     - Facility
-  #     - DATIMCode
-  #     - State
-  #   filters:
-  #     - column: DateOfExtendedEACCompletion
-  #       operator: dateinRange
-  #       value: CurrentFY
-  #     - column: DateOfExtendedEACCompletion
-  #       operator: isNotNull
-  #   groupBy:
-  #     - Facility
-  #     - DATIMCode
-  #     - State
-  #     - Sex
-  #     - AgeBand
-  #   aggregation: COUNT
-  #   disaggregation: Sex
-  #
-  # - name: Post_EAC_VL_Collected
-  #   description: "Patients who had viral load collected after completing EAC in the current FY"
-  #   source: CombinedRADET
-  #   periodColumn: DateOfRepeatVLPostEAC
-  #   requiredColumns:
-  #     - DateOfRepeatVLPostEAC
-  #     - Sex
-  #     - Age
-  #     - Facility
-  #     - DATIMCode
-  #     - State
-  #   filters:
-  #     - column: DateOfRepeatVLPostEAC
-  #       operator: dateinRange
-  #       value: CurrentFY
-  #     - column: DateOfRepeatVLPostEAC
-  #       operator: isNotNull
-  #   groupBy:
-  #     - Facility
-  #     - DATIMCode
-  #     - State
-  #     - Sex
-  #     - AgeBand
-  #   aggregation: COUNT
-  #   disaggregation: Sex
+  - name: EAC_Completed
+    description: "Patients who completed all EAC sessions (extended EAC) in the current FY"
+    source: CombinedRADET
+    periodColumn: DateOfExtendedEACCompletion
+    requiredColumns:
+      - DateOfExtendedEACCompletion
+      - Sex
+      - Age
+      - Facility
+      - DATIMCode
+      - State
+    filters:
+      - column: DateOfExtendedEACCompletion
+        operator: dateinRange
+        value: CurrentFY
+      - column: DateOfExtendedEACCompletion
+        operator: isNotNull
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: Suppressed_Post_EAC_VL_Collected
+    description: "Patients who had suppressed viral load (< 1000 copies/ml) collected after completing EAC in the current FY"
+    source: CombinedRADET
+    periodColumn: DateOfRepeatVLResultPostEAC
+    requiredColumns:
+      - DateOfRepeatVLResultPostEAC
+      - RepeatVLResultPostEAC
+      - Sex
+      - Age
+      - Facility
+      - DATIMCode
+      - State
+    filters:
+      - column: DateOfRepeatVLResultPostEAC
+        operator: dateinRange
+        value: CurrentFY
+      - column: DateOfRepeatVLResultPostEAC
+        operator: isNotNull
+      - column: RepeatVLResultPostEAC
+        operator: lessThan
+        value: 1000
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
 
   # ── Unsuppressed VL + EAC cascade (shedrackfelix) ───────────────────────
 
@@ -4029,75 +4076,6 @@ indicators:
     aggregation: COUNT
     disaggregation: Sex
 
-# Formula-based indicators (calculated from other indicators)
-formulaIndicators:
-
-  - name: LINKAGE_RATE
-    description: "Proportion of HTS positive who were linked to ART"
-    numerator: TX_New
-    denominator: HTS_TST_POS
-    formula: "numerator / denominator"
-    outputType: percentage
-    groupBy:
-      - Facility
-      - DATIMCode
-      - State
-
-  - name: TX_New_TPT_Gap
-    description: "New ART TB-negative patients who have not yet started TPT"
-    numerator: TX_New_TB_Negative
-    denominator: TX_New_Started_TPT
-    formula: "numerator - denominator"
-    outputType: count
-    groupBy:
-      - Facility
-      - DATIMCode
-      - State
-
-  - name: TB_TX_GAP
-    description: "Gap between TB positive results returned and treatment started"
-    numerator: TB_Results_Returned
-    denominator: TB_TX_Started
-    formula: "numerator - denominator"
-    outputType: count
-    groupBy:
-      - Facility
-      - DATIMCode
-      - State
-
-  - name: TX_New_TB_Tx_Gap
-    description: "Gap between TX_New clients who tested TB positive and those who started TB treatment"
-    numerator: TX_New_TB_Positive
-    denominator: TX_New_TB_TX_Started
-    formula: "numerator - denominator"
-    outputType: count
-    groupBy:
-      - Facility
-      - DATIMCode
-      - State
-
-  - name: Suppression_Rate
-    description: "Proportion of patients with VL results who are virally suppressed (< 1000 copies/mL)"
-    numerator: PVLSN
-    denominator: VL Result Received_PVLSD
-    formula: "numerator / denominator"
-    outputType: percentage
-    groupBy:
-      - Facility
-      - DATIMCode
-      - State
-
-  - name: VL_Coverage
-    description: "Proportion of eligible patients who received a viral load sample collection"
-    numerator: VL_Sample_Collected
-    denominator: Eligible_For_VLSC
-    formula: "numerator / denominator"
-    outputType: percentage
-    groupBy:
-      - Facility
-      - DATIMCode
-      - State
-
   # ── PMTCT HTS (Facility — all settings) ──────────────────────────────────────
 
   - name: PMTCT_HTS
@@ -4246,18 +4224,18 @@ formulaIndicators:
   - name: PMTCT_Previously_Known
     description: "HIV positive individuals previously known positive — on ART prior to this pregnancy (CombineMaternal sheet)"
     source: CombineMaternal
-    periodColumn: DateofInitialVisit
+    periodColumn: Date of Initial Visit
     requiredColumns:
-      - TimingofARTinitiationinmother
-      - DateofInitialVisit
+      - Timing of ART initiation in mother
+      - Date of Initial Visit
       - Sex
       - Age
       - DATIMCode
     filters:
-      - column: DateofInitialVisit
+      - column: Date of Initial Visit
         operator: dateMode
         value: DAILY
-      - column: TimingofARTinitiationinmother
+      - column: Timing of ART initiation in mother
         operator: equals
         value: "Prior to this pregnancy"
         caseSensitive: false
@@ -4600,3 +4578,72 @@ formulaIndicators:
       - AgeBand
     aggregation: COUNT
     disaggregation: Sex
+
+# Formula-based indicators (calculated from other indicators)
+formulaIndicators:
+
+  - name: LINKAGE_RATE
+    description: "Proportion of HTS positive who were linked to ART"
+    numerator: TX_New
+    denominator: HTS_TST_POS
+    formula: "numerator / denominator"
+    outputType: percentage
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+
+  - name: TX_New_TPT_Gap
+    description: "New ART TB-negative patients who have not yet started TPT"
+    numerator: TX_New_TB_Negative
+    denominator: TX_New_Started_TPT
+    formula: "numerator - denominator"
+    outputType: count
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+
+  - name: TB_TX_GAP
+    description: "Gap between TB positive results returned and treatment started"
+    numerator: TB_Results_Returned
+    denominator: TB_TX_Started
+    formula: "numerator - denominator"
+    outputType: count
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+
+  - name: TX_New_TB_Tx_Gap
+    description: "Gap between TX_New clients who tested TB positive and those who started TB treatment"
+    numerator: TX_New_TB_Positive
+    denominator: TX_New_TB_TX_Started
+    formula: "numerator - denominator"
+    outputType: count
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+
+  - name: Suppression_Rate
+    description: "Proportion of patients with VL results who are virally suppressed (< 1000 copies/mL)"
+    numerator: PVLSN
+    denominator: VL Result Received_PVLSD
+    formula: "numerator / denominator"
+    outputType: percentage
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+
+  - name: VL_Coverage
+    description: "Proportion of eligible patients who received a viral load sample collection"
+    numerator: VL_Sample_Collected
+    denominator: Eligible_For_VLSC
+    formula: "numerator / denominator"
+    outputType: percentage
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
