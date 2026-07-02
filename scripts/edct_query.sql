@@ -1,4 +1,54 @@
-WITH violence_combined AS (
+-- Deduplicate each (DataElement × Facility × Sex × AgeGroup × CategoryComboId × ReportingDate)
+-- by keeping only the latest submitted row, then SUM across CategoryCombos.
+-- This prevents inflated totals caused by re-submissions of the same category combo.
+WITH deduped AS (
+    SELECT DISTINCT ON (
+        "DataElementId",
+        "State",
+        "Facility",
+        "Datim",
+        "Sex",
+        "AgeGroup",
+        "CategoryComboId",
+        "ReportingDate"
+    )
+        "DataElementId",
+        "Section",
+        "State",
+        "Facility",
+        "Datim",
+        "Sex",
+        "AgeGroup",
+        "CategoryComboId",
+        "ReportingDate",
+        "Value"
+    FROM public."Addons"
+    WHERE "DataElementId" IN (
+        'y1C9SlSiZhQ',  -- DR POST-RESP - PHYSICAL and/or EMOTIONAL Violence_v22
+        'uXsX7BTOuPa',  -- DR POST-RESP - Sexual Violence_v22
+        'U3buuLpx4pV',  -- TB (separate)
+        'W47dKBCOu3Q',  -- TB (separate)
+        'U1u8KRnRN3o',  -- New OPD Attendance
+        'unXz0P5Fyad',  -- HIV Risk Screened (Facility)
+        'wQAwmcMTaBw',  -- HIV Risk Screened (Community)
+        'sGypnO741EM',  -- HIV Test Eligible (Facility)
+        'x6yYzcbQrSu',  -- HIV Test Eligible (Community)
+        'mC5eo9Ouku0'   -- ANC1 Attendees (PMTCT)
+    )
+    AND "ReportingDate" >= $1
+    AND "ReportingDate" <= $2
+    ORDER BY
+        "DataElementId",
+        "State",
+        "Facility",
+        "Datim",
+        "Sex",
+        "AgeGroup",
+        "CategoryComboId",
+        "ReportingDate",
+        "UpdatedAt" DESC
+),
+violence_combined AS (
     SELECT
         CASE "DataElementId"
             WHEN 'y1C9SlSiZhQ' THEN 'DR POST-RESP - PHYSICAL and/or EMOTIONAL Violence_v22'
@@ -12,7 +62,7 @@ WITH violence_combined AS (
         SUM("Value") AS "Value",
         "DataElementId",
         "ReportingDate"
-    FROM public."Addons"
+    FROM deduped
     WHERE "DataElementId" IN ('y1C9SlSiZhQ', 'uXsX7BTOuPa')
     GROUP BY
         "DataElementId",
@@ -34,7 +84,7 @@ tb_separate AS (
         SUM("Value") AS "Value",
         "DataElementId",
         "ReportingDate"
-    FROM public."Addons"
+    FROM deduped
     WHERE "DataElementId" IN ('U3buuLpx4pV', 'W47dKBCOu3Q')
     GROUP BY
         "Section",
@@ -57,7 +107,7 @@ new_opd_attendance AS (
         SUM("Value") AS "Value",
         "DataElementId",
         "ReportingDate"
-    FROM public."Addons"
+    FROM deduped
     WHERE "DataElementId" = 'U1u8KRnRN3o'
     GROUP BY
         "DataElementId",
@@ -79,7 +129,7 @@ hiv_risk_screened_facility AS (
         SUM("Value") AS "Value",
         "DataElementId",
         "ReportingDate"
-    FROM public."Addons"
+    FROM deduped
     WHERE "DataElementId" = 'unXz0P5Fyad'
     GROUP BY
         "DataElementId",
@@ -101,7 +151,7 @@ hiv_risk_screened_community AS (
         SUM("Value") AS "Value",
         "DataElementId",
         "ReportingDate"
-    FROM public."Addons"
+    FROM deduped
     WHERE "DataElementId" = 'wQAwmcMTaBw'
     GROUP BY
         "DataElementId",
@@ -123,7 +173,7 @@ hiv_test_eligible_facility AS (
         SUM("Value") AS "Value",
         "DataElementId",
         "ReportingDate"
-    FROM public."Addons"
+    FROM deduped
     WHERE "DataElementId" = 'sGypnO741EM'
     GROUP BY
         "DataElementId",
@@ -145,7 +195,7 @@ hiv_test_eligible_community AS (
         SUM("Value") AS "Value",
         "DataElementId",
         "ReportingDate"
-    FROM public."Addons"
+    FROM deduped
     WHERE "DataElementId" = 'x6yYzcbQrSu'
     GROUP BY
         "DataElementId",
@@ -167,7 +217,7 @@ anc1_attendees AS (
         SUM("Value") AS "Value",
         "DataElementId",
         "ReportingDate"
-    FROM public."Addons"
+    FROM deduped
     WHERE "DataElementId" = 'mC5eo9Ouku0'
     GROUP BY
         "DataElementId",
