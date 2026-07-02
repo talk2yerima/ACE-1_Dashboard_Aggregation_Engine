@@ -145,8 +145,11 @@ export class DateHelper {
         return `W${String(t.week()).padStart(2, '0')}/${t.format('YYYY')}`;
       case 'MONTHLY':
         return t.format('MMM YYYY');
-      case 'QUARTERLY':
-        return `Q${t.quarter()} ${t.format('YYYY')}`;
+      case 'QUARTERLY': {
+        const fyStart = this.getPEPFARFiscalYearStart();
+        const pepfarQ = Math.floor(t.diff(fyStart, 'month') / 3) + 1;
+        return `Q${pepfarQ} FY${fyStart.year() + 1}`;
+      }
       case 'YEARLY':
         return t.format('YYYY');
       case 'CUSTOM': {
