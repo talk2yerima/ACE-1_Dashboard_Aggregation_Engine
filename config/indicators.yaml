@@ -2905,33 +2905,34 @@ indicators:
   #   disaggregation: Sex
 
   - name: VL_Unsuppressed
-    description: "Active patients with unsuppressed viral load (>= 1000 copies/mL)"
+    description: "Active patients with unsuppressed viral load (>= 1000 copies/mL) on ART >= 6 months"
     source: CombinedRADET
-    periodColumn: DateOfCurrentViralLoad
     requiredColumns:
-      - DateOfCurrentViralLoad
       - CurrentViralLoad
       - CurrentARTStatus
+      - DateOfCurrentVLResultSample
+      - ARTStartDate
       - Sex
       - Age
       - Facility
       - DATIMCode
       - State
     filters:
-      - column: DateOfCurrentViralLoad
-        operator: dateMode
-        value: DAILY
-      - column: CurrentViralLoad
-        operator: isNotNull
-      - column: CurrentViralLoad
-        operator: greaterThanOrEqual
-        value: 1000
       - column: CurrentARTStatus
         operator: inList
         value:
           - "Active"
           - "Active Restart"
         caseSensitive: false
+      - column: CurrentViralLoad
+        operator: greaterThanOrEqual
+        value: 1000
+      - column: DateOfCurrentVLResultSample
+        operator: isNotNull
+      - column: DateOfCurrentVLResultSample
+        operator: dateDiff
+        ref: ARTStartDate
+        value: ">= 180"
     groupBy:
       - Facility
       - DATIMCode
@@ -3106,38 +3107,6 @@ indicators:
   #   disaggregation: Sex
 
   # ── Unsuppressed VL + EAC cascade (shedrackfelix) ───────────────────────
-
-  - name: Unsuppressed_VL
-    description: "Active patients with unsuppressed viral load (VL >= 1000 copies/ml)"
-    source: CombinedRADET
-    periodColumn: DateOfCurrentViralLoad
-    requiredColumns:
-      - CurrentViralLoad
-      - CurrentARTStatus
-      - DateOfCurrentViralLoad
-      - Sex
-      - Age
-      - Facility
-      - DATIMCode
-      - State
-    filters:
-      - column: CurrentARTStatus
-        operator: contains
-        value: "Active"
-        caseSensitive: false
-      - column: CurrentViralLoad
-        operator: isNotNull
-      - column: CurrentViralLoad
-        operator: greaterThanOrEqual
-        value: 1000
-    groupBy:
-      - Facility
-      - DATIMCode
-      - State
-      - Sex
-      - AgeBand
-    aggregation: COUNT
-    disaggregation: Sex
 
   - name: Unsuppressed_Started_EAC
     description: "Unsuppressed active patients (VL >= 1000) who commenced EAC"
