@@ -3098,19 +3098,19 @@ indicators:
   - name: EAC_Completed
     description: "Patients who completed all EAC sessions (extended EAC) in the current FY"
     source: CombinedRADET
-    periodColumn: DateOfExtendedEACCompletion
+    periodColumn: DateofRepeatViralLoadResult
     requiredColumns:
-      - DateOfExtendedEACCompletion
+      - DateofRepeatViralLoadResult
       - Sex
       - Age
       - Facility
       - DATIMCode
       - State
     filters:
-      - column: DateOfExtendedEACCompletion
+      - column: DateofRepeatViralLoadResult
         operator: dateinRange
         value: CurrentFY
-      - column: DateOfExtendedEACCompletion
+      - column: DateofRepeatViralLoadResult
         operator: isNotNull
     groupBy:
       - Facility
