@@ -355,6 +355,7 @@ indicators:
       - FinalHIVTestResult
       - DateOfHIVTesting
       - Modality
+      - TestingSetting
       - Sex
       - Age
       - DATIMCode
@@ -362,7 +363,7 @@ indicators:
       - column: DateOfHIVTesting
         operator: dateMode
         value: DAILY
-      - column: Modality
+      - column: TestingSetting
         operator: equals
         value: "Index"
         caseSensitive: false
@@ -3964,25 +3965,47 @@ indicators:
     disaggregation: Sex
 
   - name: TX_TB_N_Already
-    description: "Active ART patients (enrolled before current FY) with TB diagnostic result in the period"
+    description: "PLHIV already on ART (before current FY) who initiated TB treatment in the reporting period"
     source: CombinedRADET
-    periodColumn: DateOfTBResultReturn
+    periodColumn: TBTreatmentStartDate
     requiredColumns:
       - DATIMCode
-      - DateOfTBResultReturn
+      - TBTreatmentStartDate
+      - TBDiagnosticResult
       - CurrentARTStatus
       - ARTStartDate
       - Sex
       - Age
     filters:
-      - column: DateOfTBResultReturn
-        operator: dateMode
-        value: DAILY
       - column: CurrentARTStatus
         operator: inList
         value:
           - "Active"
           - "Active Restart"
+        caseSensitive: false
+      - column: TBTreatmentStartDate
+        operator: isNotNull
+      - column: TBTreatmentStartDate
+        operator: dateinRange
+        value: CurrentFY
+      - column: TBDiagnosticResult
+        operator: inList
+        value:
+          - "Positive"
+          - "X-ray suggestive"
+          - "MTB detected RIF resistance not detected"
+          - "MTB detected RIF resistance detected"
+          - "Suggestive for TB"
+          - "MTB Detected (Rifampicin Resistance Detected)"
+          - "MTB Detected (Rifampicin not Resistance)"
+          - "P0sitive"
+          - "AFB Positive"
+          - "MTB trace RIF resistance indeterminate"
+          - "MTB detected RR not detected"
+          - "Detected"
+          - "TB POSITIVE"
+          - "+"
+          - "MTB detected RR detected"
         caseSensitive: false
       - column: ARTStartDate
         operator: dateNotInRange
@@ -3997,25 +4020,47 @@ indicators:
     disaggregation: Sex
 
   - name: TX_TB_N_New
-    description: "Active ART patients (newly enrolled in current FY) with TB diagnostic result in the period"
+    description: "PLHIV newly on ART (in current FY) who initiated TB treatment in the reporting period"
     source: CombinedRADET
-    periodColumn: DateOfTBResultReturn
+    periodColumn: TBTreatmentStartDate
     requiredColumns:
       - DATIMCode
-      - DateOfTBResultReturn
+      - TBTreatmentStartDate
+      - TBDiagnosticResult
       - CurrentARTStatus
       - ARTStartDate
       - Sex
       - Age
     filters:
-      - column: DateOfTBResultReturn
-        operator: dateMode
-        value: DAILY
       - column: CurrentARTStatus
         operator: inList
         value:
           - "Active"
           - "Active Restart"
+        caseSensitive: false
+      - column: TBTreatmentStartDate
+        operator: isNotNull
+      - column: TBTreatmentStartDate
+        operator: dateinRange
+        value: CurrentFY
+      - column: TBDiagnosticResult
+        operator: inList
+        value:
+          - "Positive"
+          - "X-ray suggestive"
+          - "MTB detected RIF resistance not detected"
+          - "MTB detected RIF resistance detected"
+          - "Suggestive for TB"
+          - "MTB Detected (Rifampicin Resistance Detected)"
+          - "MTB Detected (Rifampicin not Resistance)"
+          - "P0sitive"
+          - "AFB Positive"
+          - "MTB trace RIF resistance indeterminate"
+          - "MTB detected RR not detected"
+          - "Detected"
+          - "TB POSITIVE"
+          - "+"
+          - "MTB detected RR detected"
         caseSensitive: false
       - column: ARTStartDate
         operator: dateinRange
