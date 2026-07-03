@@ -2,6 +2,8 @@
 import path from 'path';
 import fs from 'fs';
 import winston from 'winston';
+import dayjs from 'dayjs';
+import customParseFormat from 'dayjs/plugin/customParseFormat';
 import { BlobServiceClient } from '@azure/storage-blob';
 
 import { AggregationEngine, DashboardRow } from './services/AggregationEngine';
@@ -10,6 +12,42 @@ import { TargetService } from './services/TargetService';
 import { WorkbookReportWriter } from './services/WorkbookReportWriter';
 import { EdctService } from './services/EdctService';
 import { DateHelper, DateModeConfig } from './helpers/DateHelper';
+
+dayjs.extend(customParseFormat);
+
+function getPEPFARQuarterLabel(dateStr: string): string | null {
+  const d = dayjs(dateStr, 'DD/MM/YYYY', true);
+  if (!d.isValid()) return null;
+  const fyStartYear = d.month() >= 9 ? d.year() : d.year() - 1;
+  const q = Math.floor(d.diff(dayjs(`${fyStartYear}-10-01`), 'month') / 3) + 1;
+  return `Q${q} FY${fyStartYear + 1}`;
+}
+
+function getMonthLabel(dateStr: string): string | null {
+  const d = dayjs(dateStr, 'DD/MM/YYYY', true);
+  return d.isValid() ? d.format('MMM YYYY') : null;
+}
+
+function aggregateRows(
+  rows: DashboardRow[],
+  getLabelFn: (dateStr: string) => string | null,
+): DashboardRow[] {
+  const map = new Map<string, DashboardRow>();
+  for (const row of rows) {
+    const label = getLabelFn(row.Period);
+    if (!label) continue;
+    const key = [label, row.State, row.Facility, row.DATIMCode, row.Indicator, row.Disaggregation, row.Category, row.Sex, row.AgeBand].join('|');
+    if (map.has(key)) {
+      const agg = map.get(key)!;
+      agg.Value = (agg.Value ?? 0) + (row.Value ?? 0);
+      if (row.Numerator != null)   agg.Numerator   = (agg.Numerator   ?? 0) + row.Numerator;
+      if (row.Denominator != null) agg.Denominator = (agg.Denominator ?? 0) + row.Denominator;
+    } else {
+      map.set(key, { ...row, Period: label, Target: null, AchievementPct: null });
+    }
+  }
+  return [...map.values()];
+}
 
 // â”€â”€â”€ Logger Setup â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
@@ -260,6 +298,7 @@ async function main(): Promise<void> {
   const csvStream = writer.openCsvStream(csvPath);
   const targetCsvStream = writer.openTargetCsvStream(targetCsvPath);
   const emittedTargetKeys = new Set<string>();
+  const allRows: DashboardRow[] = [];
   let rowCount = 0;
   let targetRowCount = 0;
 
@@ -282,6 +321,7 @@ async function main(): Promise<void> {
       targetRowCount++;
     }
 
+    allRows.push(row);
     writer.writeCsvRow(csvStream, row);
     rowCount++;
   });
@@ -298,6 +338,7 @@ async function main(): Promise<void> {
         const edctDateRange = new DateHelper(dateModeConfig).getGroupByDateRange();
         edctRows = await edctService.fetchDashboardRows(edctSqlPath, edctDateRange);
         for (const row of edctRows) {
+          allRows.push(row);
           writer.writeCsvRow(csvStream, row);
           rowCount++;
         }
@@ -310,13 +351,18 @@ async function main(): Promise<void> {
     logger.warn('  POSTGRES_CONNECTION_STRING not set — EDCT data skipped.');
   }
 
+  // Append quarterly then monthly aggregated rows to the same CSV
+  const quarterlyRows = aggregateRows(allRows, getPEPFARQuarterLabel);
+  const monthlyRows   = aggregateRows(allRows, getMonthLabel);
+  for (const row of quarterlyRows) { writer.writeCsvRow(csvStream, row); rowCount++; }
+  for (const row of monthlyRows)   { writer.writeCsvRow(csvStream, row); rowCount++; }
+  logger.info(`  Quarterly rows appended: ${quarterlyRows.length}, Monthly rows appended: ${monthlyRows.length}`);
+
   logger.info('Aggregation complete. Closing output CSV streams...');
   await writer.closeCsvStream(csvStream);
   await writer.closeCsvStream(targetCsvStream);
 
   let dashboardWorkbookPath: string | null = null;
-  let quarterlyCsvPath: string | null = null;
-  let monthlyCsvPath: string | null = null;
   if (rowCount > 0 && targetWorkbookPath) {
     const workbookWriter = new WorkbookReportWriter(logger);
     dashboardWorkbookPath = await workbookWriter.writeFyDashboardWorkbook({
@@ -325,13 +371,6 @@ async function main(): Promise<void> {
       targetWorkbookPath,
       edctRows,
     });
-    const csvPaths = await workbookWriter.writePeriodCsvFiles({
-      outputDir,
-      targetWorkbookPath,
-      edctRows,
-    });
-    quarterlyCsvPath = csvPaths.quarterlyCsvPath;
-    monthlyCsvPath   = csvPaths.monthlyCsvPath;
   }
 
   if (rowCount > 0) {
@@ -339,8 +378,6 @@ async function main(): Promise<void> {
     logger.info(`  ${csvPath} (${rowCount} rows)`);
     logger.info(`  ${targetCsvPath} (${targetRowCount} rows)`);
     if (dashboardWorkbookPath) logger.info(`  ${dashboardWorkbookPath}`);
-    if (quarterlyCsvPath) logger.info(`  ${quarterlyCsvPath}`);
-    if (monthlyCsvPath)   logger.info(`  ${monthlyCsvPath}`);
   } else {
     logger.warn('No dashboard rows generated — check your workbook and date mode.');
   }
