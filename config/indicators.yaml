@@ -4439,11 +4439,11 @@ formulaIndicators:
   # ── Transfer-in ────────────────────────────────────────────────────────────────
 
   - name: Transfer_In
-    description: "Patients who enrolled via transfer-in, by date of registration"
+    description: "Patients who enrolled via transfer-in, by ART start date"
     source: CombinedRADET
-    periodColumn: DateOfRegistration
+    periodColumn: ARTStartDate
     requiredColumns:
-      - DateOfRegistration
+      - ARTStartDate
       - CareEntryPoint
       - Sex
       - Age
@@ -4451,12 +4451,12 @@ formulaIndicators:
       - DATIMCode
       - State
     filters:
-      - column: DateOfRegistration
+      - column: ARTStartDate
         operator: dateMode
         value: DAILY
       - column: CareEntryPoint
-        operator: equals
-        value: "Transfer-in"
+        operator: contains
+        value: "Transfer"
         caseSensitive: false
     groupBy:
       - Facility
