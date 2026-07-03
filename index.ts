@@ -286,9 +286,8 @@ async function main(): Promise<void> {
     rowCount++;
   });
 
-  // ── EDCT data from PostgreSQL (Dashboard sheet only) ─────────────────────
-  // Rows are appended to DashboardSummary.csv but NOT passed to the
-  // quarterly/monthly workbook sheets (edctRows stays empty below).
+  // ── EDCT data from PostgreSQL ─────────────────────────────────────────────
+  let edctRows: DashboardRow[] = [];
   const pgConnString = process.env['POSTGRES_CONNECTION_STRING'];
   if (pgConnString) {
     const edctService = new EdctService(pgConnString, logger);
@@ -297,7 +296,7 @@ async function main(): Promise<void> {
       try {
         const edctSqlPath  = path.resolve(process.cwd(), 'scripts', 'edct_query.sql');
         const edctDateRange = new DateHelper(dateModeConfig).getGroupByDateRange();
-        const edctRows: DashboardRow[] = await edctService.fetchDashboardRows(edctSqlPath, edctDateRange);
+        edctRows = await edctService.fetchDashboardRows(edctSqlPath, edctDateRange);
         for (const row of edctRows) {
           writer.writeCsvRow(csvStream, row);
           rowCount++;
@@ -316,13 +315,23 @@ async function main(): Promise<void> {
   await writer.closeCsvStream(targetCsvStream);
 
   let dashboardWorkbookPath: string | null = null;
+  let quarterlyCsvPath: string | null = null;
+  let monthlyCsvPath: string | null = null;
   if (rowCount > 0 && targetWorkbookPath) {
     const workbookWriter = new WorkbookReportWriter(logger);
     dashboardWorkbookPath = await workbookWriter.writeFyDashboardWorkbook({
       outputDir,
       dashboardCsvPath: csvPath,
       targetWorkbookPath,
+      edctRows,
     });
+    const csvPaths = await workbookWriter.writePeriodCsvFiles({
+      outputDir,
+      targetWorkbookPath,
+      edctRows,
+    });
+    quarterlyCsvPath = csvPaths.quarterlyCsvPath;
+    monthlyCsvPath   = csvPaths.monthlyCsvPath;
   }
 
   if (rowCount > 0) {
@@ -330,6 +339,8 @@ async function main(): Promise<void> {
     logger.info(`  ${csvPath} (${rowCount} rows)`);
     logger.info(`  ${targetCsvPath} (${targetRowCount} rows)`);
     if (dashboardWorkbookPath) logger.info(`  ${dashboardWorkbookPath}`);
+    if (quarterlyCsvPath) logger.info(`  ${quarterlyCsvPath}`);
+    if (monthlyCsvPath)   logger.info(`  ${monthlyCsvPath}`);
   } else {
     logger.warn('No dashboard rows generated — check your workbook and date mode.');
   }
