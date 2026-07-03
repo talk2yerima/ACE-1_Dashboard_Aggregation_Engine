@@ -3193,6 +3193,8 @@ indicators:
       - CurrentViralLoad
       - CurrentARTStatus
       - DateOfCommencementOfEAC
+      - DateOfCurrentVLResultSample
+      - ARTStartDate
       - Sex
       - Age
       - Facility
@@ -3200,11 +3202,15 @@ indicators:
       - State
     filters:
       - column: CurrentARTStatus
-        operator: contains
-        value: "Active"
+        operator: inList
+        value:
+          - "Active"
+          - "Active Restart"
         caseSensitive: false
-      - column: CurrentViralLoad
-        operator: isNotNull
+      - column: DateOfCurrentVLResultSample
+        operator: dateDiff
+        ref: ARTStartDate
+        value: ">= 180"
       - column: CurrentViralLoad
         operator: greaterThanOrEqual
         value: 1000
