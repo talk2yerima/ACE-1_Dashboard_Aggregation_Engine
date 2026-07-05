@@ -4441,9 +4441,9 @@ formulaIndicators:
   - name: Transfer_In
     description: "Patients who enrolled via transfer-in, by ART start date"
     source: CombinedRADET
-    periodColumn: ARTStartDate
+    periodColumn: DateOfRegistration
     requiredColumns:
-      - ARTStartDate
+      - DateOfRegistration
       - CareEntryPoint
       - Sex
       - Age
@@ -4451,7 +4451,7 @@ formulaIndicators:
       - DATIMCode
       - State
     filters:
-      - column: ARTStartDate
+      - column: DateOfRegistration
         operator: dateMode
         value: DAILY
       - column: CareEntryPoint
