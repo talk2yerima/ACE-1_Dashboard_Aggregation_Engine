@@ -113,6 +113,48 @@ export class WorkbookReportWriter {
     targetWorkbookPath: string,
     edctRows: DashboardRow[],
   ): Promise<void> {
+    const { metricHeaders, facilities, months, fyMaxDate } = await this.loadPeriodData(targetWorkbookPath);
+
+    const edctIndicators = this.uniqueEdctIndicators(edctRows);
+    this.logger.info(`  EDCT indicators for quarterly/monthly sheets: ${edctIndicators.join(', ') || '(none)'}`);
+
+    const edctQuarterly = this.aggregateEdctByQuarter(edctRows);
+    const edctMonthly   = this.aggregateEdctByMonth(edctRows);
+
+    this.writeQuarterlySheet(workbook, facilities, metricHeaders, fyMaxDate, edctQuarterly, edctIndicators);
+    this.writeMonthlySheet(workbook, facilities, months, metricHeaders, edctMonthly, edctIndicators);
+  }
+
+  async writePeriodCsvFiles(options: {
+    outputDir: string;
+    targetWorkbookPath: string;
+    edctRows?: DashboardRow[];
+  }): Promise<{ quarterlyCsvPath: string; monthlyCsvPath: string }> {
+    const { outputDir, targetWorkbookPath, edctRows = [] } = options;
+    const { metricHeaders, facilities, months, fyMaxDate } = await this.loadPeriodData(targetWorkbookPath);
+
+    const edctIndicators = this.uniqueEdctIndicators(edctRows);
+    const edctQuarterly  = this.aggregateEdctByQuarter(edctRows);
+    const edctMonthly    = this.aggregateEdctByMonth(edctRows);
+
+    const quarterlyCsvPath = path.join(outputDir, 'QuarterlySummary.csv');
+    const monthlyCsvPath   = path.join(outputDir, 'MonthlySummary.csv');
+
+    this.writeQuarterlyCsv(quarterlyCsvPath, facilities, metricHeaders, fyMaxDate, edctQuarterly, edctIndicators);
+    this.writeMonthlyCsv(monthlyCsvPath, facilities, months, metricHeaders, edctMonthly, edctIndicators);
+
+    this.logger.info(`OutputWriter: QuarterlySummary.csv written -> ${quarterlyCsvPath}`);
+    this.logger.info(`OutputWriter: MonthlySummary.csv written -> ${monthlyCsvPath}`);
+
+    return { quarterlyCsvPath, monthlyCsvPath };
+  }
+
+  private async loadPeriodData(targetWorkbookPath: string): Promise<{
+    metricHeaders: string[];
+    facilities: FacilityRows[];
+    months: Dayjs[];
+    fyMaxDate: Dayjs | null;
+  }> {
     const source = new ExcelJS.Workbook();
     await source.xlsx.readFile(targetWorkbookPath);
     const sheet = source.worksheets[0];
@@ -126,10 +168,6 @@ export class WorkbookReportWriter {
     const dateCol     = cleanHeaders.indexOf('DATE')     + 1;
     const metricHeaders  = cleanHeaders.filter((h) => !['STATE', 'LGA', 'FACILITY', 'Qtr', 'DATE'].includes(h));
     const metricIndexes  = metricHeaders.map((h) => cleanHeaders.indexOf(h) + 1);
-
-    // Collect unique EDCT indicator names (preserves insertion order = SQL order)
-    const edctIndicators = this.uniqueEdctIndicators(edctRows);
-    this.logger.info(`  EDCT indicators for quarterly/monthly sheets: ${edctIndicators.join(', ') || '(none)'}`);
 
     const facilities  = new Map<string, FacilityRows>();
     const monthStarts = new Map<string, Dayjs>();
@@ -154,13 +192,7 @@ export class WorkbookReportWriter {
     }
 
     const months = [...monthStarts.values()].sort((a, b) => a.valueOf() - b.valueOf());
-
-    // Aggregate EDCT by quarter and month
-    const edctQuarterly = this.aggregateEdctByQuarter(edctRows);
-    const edctMonthly   = this.aggregateEdctByMonth(edctRows);
-
-    this.writeQuarterlySheet(workbook, [...facilities.values()], metricHeaders, fyMaxDate, edctQuarterly, edctIndicators);
-    this.writeMonthlySheet(workbook, [...facilities.values()], months, metricHeaders, edctMonthly, edctIndicators);
+    return { metricHeaders, facilities: [...facilities.values()], months, fyMaxDate };
   }
 
   // ── EDCT aggregation ─────────────────────────────────────────────────────────
@@ -351,6 +383,101 @@ export class WorkbookReportWriter {
     ws.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: headers.length } };
     ws.commit();
     this.logger.info(`  Monthly sheet: ${facilities.length} target facilities + ${edctBuckets.length} EDCT rows`);
+  }
+
+  // ── CSV period writers ────────────────────────────────────────────────────────
+
+  private writeQuarterlyCsv(
+    filePath: string,
+    facilities: FacilityRows[],
+    metricHeaders: string[],
+    fyMaxDate: Dayjs | null,
+    edctBuckets: EdctBucket[],
+    edctIndicators: string[],
+  ): void {
+    const headers = ['STATE', 'LGA', 'FACILITY', 'Quarter', 'TargetDate', ...metricHeaders, ...edctIndicators];
+    const lines: string[] = [this.toCsvRow(headers)];
+    const nullEdct = edctIndicators.map(() => null);
+
+    for (const facility of facilities) {
+      for (const quarter of FISCAL_QUARTERS) {
+        const row = this.findMaxDateRow(facility.rows, quarter.start, quarter.end);
+        if (!row) continue;
+        lines.push(this.toCsvRow([
+          facility.state, facility.lga, facility.facility,
+          quarter.label, row.date.format('YYYY-MM-DD'),
+          ...row.values, ...nullEdct,
+        ]));
+      }
+      if (fyMaxDate) {
+        const row = this.findMaxDateRow(facility.rows, dayjs('2025-10-01'), fyMaxDate);
+        if (row) lines.push(this.toCsvRow([
+          facility.state, facility.lga, facility.facility,
+          'FY26', row.date.format('YYYY-MM-DD'),
+          ...row.values, ...nullEdct,
+        ]));
+      }
+    }
+
+    const nullMetrics = metricHeaders.map(() => null);
+    for (const bucket of edctBuckets) {
+      const edctValues = edctIndicators.map((ind) => (ind === bucket.indicator ? bucket.value : null));
+      lines.push(this.toCsvRow([
+        bucket.state, '', bucket.facility,
+        bucket.period, '',
+        ...nullMetrics, ...edctValues,
+      ]));
+    }
+
+    fs.writeFileSync(filePath, lines.join('\r\n'), 'utf8');
+  }
+
+  private writeMonthlyCsv(
+    filePath: string,
+    facilities: FacilityRows[],
+    months: Dayjs[],
+    metricHeaders: string[],
+    edctBuckets: EdctBucket[],
+    edctIndicators: string[],
+  ): void {
+    const headers = ['STATE', 'LGA', 'FACILITY', 'Month', 'TargetDate', ...metricHeaders, ...edctIndicators];
+    const lines: string[] = [this.toCsvRow(headers)];
+    const nullEdct = edctIndicators.map(() => null);
+
+    for (const facility of facilities) {
+      for (const month of months) {
+        const row = this.findMaxDateRow(facility.rows, month.startOf('month'), month.endOf('month'));
+        if (!row) continue;
+        lines.push(this.toCsvRow([
+          facility.state, facility.lga, facility.facility,
+          month.format('MMM-YY'), row.date.format('YYYY-MM-DD'),
+          ...row.values, ...nullEdct,
+        ]));
+      }
+    }
+
+    const nullMetrics = metricHeaders.map(() => null);
+    for (const bucket of edctBuckets) {
+      const edctValues = edctIndicators.map((ind) => (ind === bucket.indicator ? bucket.value : null));
+      lines.push(this.toCsvRow([
+        bucket.state, '', bucket.facility,
+        bucket.period, '',
+        ...nullMetrics, ...edctValues,
+      ]));
+    }
+
+    fs.writeFileSync(filePath, lines.join('\r\n'), 'utf8');
+  }
+
+  private toCsvRow(values: unknown[]): string {
+    return values.map((v) => {
+      if (v === null || v === undefined) return '';
+      const str = String(v);
+      if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+        return `"${str.replace(/"/g, '""')}"`;
+      }
+      return str;
+    }).join(',');
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────────

@@ -1,3 +1,9 @@
+#package APP for Deployment with:
+
+#cd "e:\D Drive\PROJECTS\radet-dashboard-engine\radet-dashboard-pkg"; .\package_deploy.ps1 2>&1
+
+
+
 ==============================================================================
   RADET Dashboard Aggregation Engine  -  Deployment Guide
   AHNi Nigeria  |  Version 1.0
@@ -180,7 +186,7 @@ Your .env file (with Azure keys and schedule) is not touched during updates.
 PROBLEM: "Node.js not found" during setup
   FIX: Install Node.js 20 LTS from https://nodejs.org
        During install, check "Add to PATH". Re-run setup.bat.
-
+ 
 PROBLEM: "[2/4] Package installation failed"
   FIX: Make sure the VM has internet access.
        Then re-run setup.bat — it will continue from where it stopped.

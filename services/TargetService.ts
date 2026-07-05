@@ -239,8 +239,19 @@ export class TargetService {
   }
 
   private parsePeriod(value: unknown): Dayjs | null {
-    const parsed = dayjs(String(value ?? '').trim(), ['DD/MM/YYYY', 'YYYY-MM-DD'], true);
-    return parsed.isValid() ? parsed.startOf('day') : null;
+    const str = String(value ?? '').trim();
+    if (!str) return null;
+    const exact = dayjs(str, ['DD/MM/YYYY', 'YYYY-MM-DD'], true);
+    if (exact.isValid()) return exact.startOf('day');
+    const monthly = dayjs(str, 'MMM YYYY', true);
+    if (monthly.isValid()) return monthly.startOf('month');
+    const qMatch = str.match(/^Q(\d)\s+FY(\d{4})$/);
+    if (qMatch) {
+      const q = parseInt(qMatch[1], 10);
+      const fyYear = parseInt(qMatch[2], 10);
+      return dayjs(`${fyYear - 1}-10-01`).add((q - 1) * 3, 'month').startOf('month');
+    }
+    return null;
   }
 
   private parseDate(value: unknown): Dayjs | null {
