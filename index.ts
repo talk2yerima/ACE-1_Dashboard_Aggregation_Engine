@@ -293,10 +293,12 @@ async function main(): Promise<void> {
   } else {
     logger.warn('Target workbook not found â€” DashboardSummary.csv Target column will remain blank.');
   }
-  const csvPath = path.join(outputDir, 'DashboardSummary.csv');
-  const targetCsvPath = path.join(outputDir, 'DashboardTargets.csv');
-  const csvStream = writer.openCsvStream(csvPath);
-  const targetCsvStream = writer.openTargetCsvStream(targetCsvPath);
+  const csvPath          = path.join(outputDir, 'DashboardSummary.csv');
+  const quarterlyCsvPath = path.join(outputDir, 'QuarterlySummary.csv');
+  const monthlyCsvPath   = path.join(outputDir, 'MonthlySummary.csv');
+  const targetCsvPath    = path.join(outputDir, 'DashboardTargets.csv');
+  const csvStream        = writer.openCsvStream(csvPath);
+  const targetCsvStream  = writer.openTargetCsvStream(targetCsvPath);
   const emittedTargetKeys = new Set<string>();
   const allRows: DashboardRow[] = [];
   let rowCount = 0;
@@ -351,12 +353,17 @@ async function main(): Promise<void> {
     logger.warn('  POSTGRES_CONNECTION_STRING not set — EDCT data skipped.');
   }
 
-  // Append quarterly then monthly aggregated rows to the same CSV
-  const quarterlyRows = aggregateRows(allRows, getPEPFARQuarterLabel);
-  const monthlyRows   = aggregateRows(allRows, getMonthLabel);
-  for (const row of quarterlyRows) { writer.writeCsvRow(csvStream, row); rowCount++; }
-  for (const row of monthlyRows)   { writer.writeCsvRow(csvStream, row); rowCount++; }
-  logger.info(`  Quarterly rows appended: ${quarterlyRows.length}, Monthly rows appended: ${monthlyRows.length}`);
+  // Write quarterly and monthly aggregations to their own CSVs (NOT DashboardSummary)
+  // so Power BI can reference each file independently without double-counting.
+  const quarterlyRows    = aggregateRows(allRows, getPEPFARQuarterLabel);
+  const monthlyRows      = aggregateRows(allRows, getMonthLabel);
+  const quarterlyStream  = writer.openCsvStream(quarterlyCsvPath);
+  const monthlyStream    = writer.openCsvStream(monthlyCsvPath);
+  for (const row of quarterlyRows) writer.writeCsvRow(quarterlyStream, row);
+  for (const row of monthlyRows)   writer.writeCsvRow(monthlyStream,   row);
+  await writer.closeCsvStream(quarterlyStream);
+  await writer.closeCsvStream(monthlyStream);
+  logger.info(`  QuarterlySummary.csv: ${quarterlyRows.length} rows | MonthlySummary.csv: ${monthlyRows.length} rows`);
 
   logger.info('Aggregation complete. Closing output CSV streams...');
   await writer.closeCsvStream(csvStream);
