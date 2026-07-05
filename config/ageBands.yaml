@@ -2,7 +2,7 @@
 
 ageBands:
   - label: "<1"
-    min: 0
+    min: -100
     max: 0
   - label: "1-4"
     min: 1
