@@ -4780,6 +4780,143 @@ indicators:
     aggregation: COUNT
     disaggregation: Sex
 
+# ── PrEP Cascade — Pregnant Mothers only ─────────────────────────────────────
+
+  - name: PrEP_Eligible_Pregnant
+    description: "TX_CURR pregnant clients eligible for PrEP (15yrs+) — current FY"
+    source: CombinePrep
+    periodColumn: "Date Eligible for PrEP"
+    requiredColumns:
+      - "Eligible for PrEP"
+      - "Date Eligible for PrEP"
+      - "Pregnancy Status"
+      - Age
+      - Sex
+      - "Facility Id (Datim)"
+      - State
+    filters:
+      - column: "Eligible for PrEP"
+        operator: equals
+        value: "Yes"
+        caseSensitive: false
+      - column: "Date Eligible for PrEP"
+        operator: dateinRange
+        value: CurrentFY
+      - column: Age
+        operator: greaterThanOrEqual
+        value: 15
+      - column: "Pregnancy Status"
+        operator: equals
+        value: "Pregnant"
+        caseSensitive: false
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: PrEP_Offered_Pregnant
+    description: "Pregnant clients who were offered PrEP — current FY"
+    source: CombinePrep
+    periodColumn: "Date offered PrEP"
+    requiredColumns:
+      - "Offered PrEP"
+      - "Date offered PrEP"
+      - "Pregnancy Status"
+      - Age
+      - Sex
+      - "Facility Id (Datim)"
+      - State
+    filters:
+      - column: "Offered PrEP"
+        operator: equals
+        value: "Yes"
+        caseSensitive: false
+      - column: "Date offered PrEP"
+        operator: dateinRange
+        value: CurrentFY
+      - column: "Pregnancy Status"
+        operator: equals
+        value: "Pregnant"
+        caseSensitive: false
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: PrEP_Accept_Pregnant
+    description: "Pregnant clients willing to commence PrEP — current FY"
+    source: CombinePrep
+    periodColumn: "Date willing to commence PrEP"
+    requiredColumns:
+      - "Willing to Commence PREP"
+      - "Date willing to commence PrEP"
+      - "Pregnancy Status"
+      - Age
+      - Sex
+      - "Facility Id (Datim)"
+      - State
+    filters:
+      - column: "Willing to Commence PREP"
+        operator: equals
+        value: "Yes"
+        caseSensitive: false
+      - column: "Date willing to commence PrEP"
+        operator: dateinRange
+        value: CurrentFY
+      - column: "Pregnancy Status"
+        operator: equals
+        value: "Pregnant"
+        caseSensitive: false
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: PrEP_New_Pregnant
+    description: "Pregnant clients newly initiated on PrEP (Visit Type = Initiation) — current FY"
+    source: CombinePrep
+    periodColumn: "Date Of Commencement (yyyy-mm-dd)"
+    requiredColumns:
+      - "Date Of Commencement (yyyy-mm-dd)"
+      - "Visit Type"
+      - "Pregnancy Status"
+      - Age
+      - Sex
+      - "Facility Id (Datim)"
+      - State
+    filters:
+      - column: "Date Of Commencement (yyyy-mm-dd)"
+        operator: dateinRange
+        value: CurrentFY
+      - column: "Visit Type"
+        operator: equals
+        value: "Initiation"
+        caseSensitive: false
+      - column: "Pregnancy Status"
+        operator: equals
+        value: "Pregnant"
+        caseSensitive: false
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
 # Formula-based indicators (calculated from other indicators)
 formulaIndicators:
 
