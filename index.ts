@@ -400,9 +400,12 @@ async function main(): Promise<void> {
     const blobName = blobPrefix + path.basename(filePath);
     const blockBlobClient = containerClient.getBlockBlobClient(blobName);
     const fileSize = fs.statSync(filePath).size;
-    await blockBlobClient.uploadStream(fs.createReadStream(filePath), undefined, undefined, {
-      blobHTTPHeaders: { blobContentType: contentType },
-    });
+    await blockBlobClient.uploadStream(
+      fs.createReadStream(filePath),
+      4 * 1024 * 1024,  // 4 MB buffer per block
+      4,                // 4 concurrent block uploads
+      { blobHTTPHeaders: { blobContentType: contentType } },
+    );
     logger.info(`  Uploaded: ${blobName} (${(fileSize / 1024).toFixed(1)} KB) -> ${containerName}`);
   }
 
