@@ -4672,6 +4672,7 @@ indicators:
     requiredColumns:
       - "Eligible for PrEP"
       - "Date Eligible for PrEP"
+      - "Pregnancy Status"
       - Age
       - Sex
       - "Facility Id (Datim)"
@@ -4707,6 +4708,7 @@ indicators:
     requiredColumns:
       - "Offered PrEP"
       - "Date offered PrEP"
+      - "Pregnancy Status"
       - Age
       - Sex
       - "Facility Id (Datim)"
@@ -4739,6 +4741,7 @@ indicators:
     requiredColumns:
       - "Willing to Commence PREP"
       - "Date willing to commence PrEP"
+      - "Pregnancy Status"
       - Age
       - Sex
       - "Facility Id (Datim)"
@@ -4771,6 +4774,7 @@ indicators:
     requiredColumns:
       - "Date Of Commencement (yyyy-mm-dd)"
       - "Visit Type"
+      - "Pregnancy Status"
       - Age
       - Sex
       - "Facility Id (Datim)"
