@@ -4663,6 +4663,123 @@ indicators:
     aggregation: COUNT
     disaggregation: Sex
 
+# ── PrEP Cascade (CombinePrep sheet) ─────────────────────────────────────────
+
+  - name: PrEP_Eligible
+    description: "TX_CURR clients eligible for life-saving PrEP (15yrs+) — current FY"
+    source: CombinePrep
+    periodColumn: "Date Eligible for PrEP"
+    requiredColumns:
+      - "Eligible for PrEP"
+      - "Date Eligible for PrEP"
+      - Age
+      - Sex
+      - "Facility Id (Datim)"
+      - State
+    filters:
+      - column: "Eligible for PrEP"
+        operator: equals
+        value: "Yes"
+        caseSensitive: false
+      - column: "Date Eligible for PrEP"
+        operator: dateinRange
+        value: CurrentFY
+      - column: Age
+        operator: greaterThanOrEqual
+        value: 15
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: PrEP_Offered
+    description: "Eligible clients who were offered life-saving PrEP — current FY"
+    source: CombinePrep
+    periodColumn: "Date offered PrEP"
+    requiredColumns:
+      - "Offered PrEP"
+      - "Date offered PrEP"
+      - Age
+      - Sex
+      - "Facility Id (Datim)"
+      - State
+    filters:
+      - column: "Offered PrEP"
+        operator: equals
+        value: "Yes"
+        caseSensitive: false
+      - column: "Date offered PrEP"
+        operator: dateinRange
+        value: CurrentFY
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: PrEP_Accept
+    description: "Clients willing to commence PrEP (accepted life-saving PrEP) — current FY"
+    source: CombinePrep
+    periodColumn: "Date willing to commence PrEP"
+    requiredColumns:
+      - "Willing to Commence PREP"
+      - "Date willing to commence PrEP"
+      - Age
+      - Sex
+      - "Facility Id (Datim)"
+      - State
+    filters:
+      - column: "Willing to Commence PREP"
+        operator: equals
+        value: "Yes"
+        caseSensitive: false
+      - column: "Date willing to commence PrEP"
+        operator: dateinRange
+        value: CurrentFY
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
+  - name: PrEP_New
+    description: "Clients newly initiated on PrEP (Visit Type = Initiation) — current FY"
+    source: CombinePrep
+    periodColumn: "Date Of Commencement (yyyy-mm-dd)"
+    requiredColumns:
+      - "Date Of Commencement (yyyy-mm-dd)"
+      - "Visit Type"
+      - Age
+      - Sex
+      - "Facility Id (Datim)"
+      - State
+    filters:
+      - column: "Date Of Commencement (yyyy-mm-dd)"
+        operator: dateinRange
+        value: CurrentFY
+      - column: "Visit Type"
+        operator: equals
+        value: "Initiation"
+        caseSensitive: false
+    groupBy:
+      - Facility
+      - DATIMCode
+      - State
+      - Sex
+      - AgeBand
+    aggregation: COUNT
+    disaggregation: Sex
+
 # Formula-based indicators (calculated from other indicators)
 formulaIndicators:
 
