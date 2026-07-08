@@ -4689,8 +4689,10 @@ indicators:
         operator: greaterThanOrEqual
         value: 15
       - column: "Pregnancy Status"
-        operator: equals
-        value: "Pregnant"
+        operator: inList
+        value:
+          - "Pregnant"
+          - "Breastfeeding"
         caseSensitive: false
     groupBy:
       - Facility
@@ -4722,8 +4724,10 @@ indicators:
         operator: dateinRange
         value: CurrentFY
       - column: "Pregnancy Status"
-        operator: equals
-        value: "Pregnant"
+        operator: inList
+        value:
+          - "Pregnant"
+          - "Breastfeeding"
         caseSensitive: false
     groupBy:
       - Facility
@@ -4755,8 +4759,10 @@ indicators:
         operator: dateinRange
         value: CurrentFY
       - column: "Pregnancy Status"
-        operator: equals
-        value: "Pregnant"
+        operator: inList
+        value:
+          - "Pregnant"
+          - "Breastfeeding"
         caseSensitive: false
     groupBy:
       - Facility
@@ -4788,8 +4794,10 @@ indicators:
         value: "Initiation"
         caseSensitive: false
       - column: "Pregnancy Status"
-        operator: equals
-        value: "Pregnant"
+        operator: inList
+        value:
+          - "Pregnant"
+          - "Breastfeeding"
         caseSensitive: false
     groupBy:
       - Facility
