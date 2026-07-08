@@ -4414,7 +4414,7 @@ indicators:
   # ── Transfer-in ────────────────────────────────────────────────────────────────
 
   - name: Transfer_In
-    description: "Patients who enrolled via transfer-in, by ART start date"
+    description: "Patients who enrolled via transfer-in, by date of registration"
     source: CombinedRADET
     periodColumn: DateOfRegistration
     requiredColumns:
@@ -4678,10 +4678,6 @@ indicators:
       - "Facility Id (Datim)"
       - State
     filters:
-      - column: "Eligible for PrEP"
-        operator: equals
-        value: "Yes"
-        caseSensitive: false
       - column: "Date Eligible for PrEP"
         operator: dateinRange
         value: CurrentFY
@@ -4716,13 +4712,12 @@ indicators:
       - "Facility Id (Datim)"
       - State
     filters:
-      - column: "Offered PrEP"
-        operator: equals
-        value: "Yes"
-        caseSensitive: false
       - column: "Date offered PrEP"
         operator: dateinRange
         value: CurrentFY
+      - column: Age
+        operator: greaterThanOrEqual
+        value: 15
       - column: "Pregnancy Status"
         operator: inList
         value:
@@ -4751,13 +4746,12 @@ indicators:
       - "Facility Id (Datim)"
       - State
     filters:
-      - column: "Willing to Commence PREP"
-        operator: equals
-        value: "Yes"
-        caseSensitive: false
       - column: "Date willing to commence PrEP"
         operator: dateinRange
         value: CurrentFY
+      - column: Age
+        operator: greaterThanOrEqual
+        value: 15
       - column: "Pregnancy Status"
         operator: inList
         value:
@@ -4793,6 +4787,9 @@ indicators:
         operator: equals
         value: "Initiation"
         caseSensitive: false
+      - column: Age
+        operator: greaterThanOrEqual
+        value: 15
       - column: "Pregnancy Status"
         operator: inList
         value:
