@@ -2872,9 +2872,8 @@ indicators:
         operator: dateinRange
         value: CurrentFY
       - column: ARTStartDate
-        operator: dateDiff
-        ref: today
-        value: ">= 180"
+        operator: dateinRange
+        value: Before180DaysAgo
     groupBy:
       - Facility
       - DATIMCode
@@ -2909,9 +2908,8 @@ indicators:
         operator: dateinRange
         value: CurrentFY
       - column: ARTStartDate
-        operator: dateDiff
-        ref: today
-        value: ">= 180"
+        operator: dateinRange
+        value: Before180DaysAgo
       - column: DateOfVLSampleCollection
         operator: isNotNull
     groupBy:
@@ -2949,9 +2947,8 @@ indicators:
         operator: dateinRange
         value: CurrentFY
       - column: ARTStartDate
-        operator: dateDiff
-        ref: today
-        value: ">= 180"
+        operator: dateinRange
+        value: Before180DaysAgo
       - column: DateOfVLSampleCollection
         operator: isNotNull
       - column: DateOfCurrentVLResultSample
@@ -2992,9 +2989,8 @@ indicators:
         operator: dateinRange
         value: CurrentFY
       - column: ARTStartDate
-        operator: dateDiff
-        ref: today
-        value: ">= 180"
+        operator: dateinRange
+        value: Before180DaysAgo
       - column: DateOfVLSampleCollection
         operator: isNotNull
       - column: DateOfCurrentVLResultSample
