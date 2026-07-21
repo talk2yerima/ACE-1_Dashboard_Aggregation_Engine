@@ -24,13 +24,20 @@ if (Test-Path $ZipPath) { Remove-Item $ZipPath -Force }
 $Items = @(
     "dist",
     "config",
+    "scripts",
+    "nssm",
     "package.json",
+    "package-lock.json",
     ".env.example",
     "setup.bat",
     "install_service.ps1",
     "service_runner.js",
     "DEPLOYMENT_GUIDE.txt"
 )
+
+# File extensions to exclude when zipping a folder (stray/editor temp files
+# that shouldn't ship, e.g. config/indicators.yaml.tmp)
+$ExcludeExtensions = @(".tmp")
 
 Write-Host "`n[2/3] Creating deployment ZIP..." -ForegroundColor Yellow
 
@@ -48,7 +55,7 @@ function Add-ToZip {
         $stream.CopyTo($zipStream)
         $zipStream.Close(); $stream.Close()
     } elseif (Test-Path $sourcePath -PathType Container) {
-        $files = Get-ChildItem $sourcePath -Recurse -File
+        $files = Get-ChildItem $sourcePath -Recurse -File | Where-Object { $ExcludeExtensions -notcontains $_.Extension }
         foreach ($file in $files) {
             $relative = $file.FullName.Substring($sourcePath.Length).TrimStart('\','/')
             $entry = "$entryPrefix/$relative" -replace '\\','/'
