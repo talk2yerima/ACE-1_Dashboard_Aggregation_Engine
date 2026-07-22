@@ -145,6 +145,12 @@ export class AggregationEngine {
   private compoundSuffixMap = new Map<string, string>();
   private suffixCachePath = '';
 
+  // Set by preReadSharedStrings when xl/sharedStrings.xml could not be located
+  // in a ZIP that clearly contains substantial worksheet data (i.e. this is not
+  // a small inline-strings file where sharedStrings.xml legitimately doesn't
+  // exist). Gates the end-of-run sanity check in process().
+  private sharedStringsMissingButExpected = false;
+
   public validationIssues: ValidationIssue[] = [];
   public stats: ProcessingStats = {
     totalRows: 0,
@@ -573,7 +579,7 @@ export class AggregationEngine {
     // so ExcelJS cannot map internal filenames (sheet1, sheet2…) to visible tab names
     // (CombinedRADET, CombinedHTS…) when it emits worksheet events. We pre-read both
     // workbook.xml and workbook.xml.rels to build our own filename→tabName map.
-    const [preloadedStrings, sheetNameMap] = await Promise.all([
+    const [{ strings: preloadedStrings, nsPrefix }, sheetNameMap] = await Promise.all([
       this.preReadSharedStrings(this.options.workbookPath),
       this.preReadSheetNames(this.options.workbookPath),
     ]);
@@ -594,6 +600,21 @@ export class AggregationEngine {
           entry.on('error', () => resolve());
           entry.resume();
         });
+      };
+    }
+    if (nsPrefix) {
+      // The worksheet XML uses the same namespace-prefixed style as
+      // sharedStrings.xml (e.g. <x:row><x:c t="s"><x:v>0</x:v></x:c></x:row>).
+      // ExcelJS's row/cell SAX handler only recognises unprefixed tag names,
+      // so strip the prefix from each worksheet's raw XML stream before it
+      // reaches the parser. See stripNamespacePrefix() for why this is safe.
+      this.logger.info(`AggregationEngine: worksheet XML is namespace-prefixed ("${nsPrefix}") — rewriting tags before parsing`);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const readerAny = reader as any;
+      const originalParseWorksheet = readerAny._parseWorksheet.bind(readerAny);
+      const stripFn = this.stripNamespacePrefix.bind(this);
+      readerAny._parseWorksheet = function* (iterator: AsyncIterable<Buffer | string>, sheetNo: string) {
+        yield* originalParseWorksheet(stripFn(iterator, nsPrefix), sheetNo);
       };
     }
     reader.read();
@@ -867,6 +888,32 @@ export class AggregationEngine {
     this.logger.info(`  Dashboard rows output:  ${this.stats.aggregatedRows}`);
     this.logger.info(`  Indicators processed:   ${this.stats.indicatorsProcessed.join(', ')}`);
 
+    // ── Sanity gate ──────────────────────────────────────────────────────────
+    // Two independent signals that a run silently failed rather than
+    // genuinely finding no data — either one is grounds to abort here,
+    // before the caller writes/uploads anything, rather than silently
+    // publishing an empty or partial dataset that could overwrite good data.
+    if (this.sharedStringsMissingButExpected) {
+      throw new Error(
+        'AggregationEngine: aborting — xl/sharedStrings.xml could not be read (or produced no ' +
+        'usable strings) from a workbook with substantial worksheet data, so no row content was ' +
+        `readable (Total rows read: ${this.stats.totalRows}). Refusing to produce output from this run. ` +
+        'Re-run the pipeline; if this recurs, investigate the workbook file directly.',
+      );
+    }
+    const workbookSizeBytes = fs.existsSync(this.options.workbookPath)
+      ? fs.statSync(this.options.workbookPath).size
+      : 0;
+    if (this.stats.totalRows === 0 && workbookSizeBytes > AggregationEngine.SUBSTANTIAL_WORKSHEET_BYTES) {
+      throw new Error(
+        `AggregationEngine: aborting — 0 rows were read from a workbook of ` +
+        `${workbookSizeBytes.toLocaleString()} bytes on disk. A file this size should contain data; ` +
+        '0 rows most likely means something in the workbook could not be parsed (e.g. an XML style ' +
+        'this pipeline does not recognise), not that today genuinely has no data. Refusing to ' +
+        'produce output from this run — investigate the workbook file directly.',
+      );
+    }
+
     return this.stats;
   }
 
@@ -1007,61 +1054,198 @@ export class AggregationEngine {
   // a transitive dependency of ExcelJS).  Returns a plain string array whose indices
   // match the shared-string references in the worksheet XML.
 
-  private async preReadSharedStrings(xlsxPath: string): Promise<string[]> {
+  // A worksheet entry above this size indicates a real, data-filled sheet
+  // (as opposed to a small/empty sample or inline-strings-only workbook) —
+  // used to decide whether a missing sharedStrings.xml is suspicious or benign.
+  private static readonly SUBSTANTIAL_WORKSHEET_BYTES = 500_000;
+  private static readonly SHARED_STRINGS_MAX_ATTEMPTS = 3;
+  private static readonly SHARED_STRINGS_RETRY_DELAY_MS = 750;
+
+  private async preReadSharedStrings(xlsxPath: string): Promise<{ strings: string[]; nsPrefix: string }> {
     this.logger.info('AggregationEngine: pre-reading xl/sharedStrings.xml from ZIP…');
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const unzipper = require('unzipper') as {
-        Open: {
-          file(p: string): Promise<{
-            files: Array<{ path: string; buffer(): Promise<Buffer> }>;
-          }>;
-        };
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const unzipper = require('unzipper') as {
+      Open: {
+        file(p: string): Promise<{
+          files: Array<{ path: string; uncompressedSize?: number; buffer(): Promise<Buffer> }>;
+        }>;
       };
-      const dir = await unzipper.Open.file(xlsxPath);
-      const ssFile = dir.files.find(f => f.path === 'xl/sharedStrings.xml');
-      if (!ssFile) {
-        this.logger.warn('AggregationEngine: xl/sharedStrings.xml not found in ZIP');
-        return [];
-      }
+    };
 
-      const xml = (await ssFile.buffer()).toString('utf8');
-      const strings: string[] = [];
-      let pos = 0;
+    for (let attempt = 1; attempt <= AggregationEngine.SHARED_STRINGS_MAX_ATTEMPTS; attempt++) {
+      try {
+        const dir = await unzipper.Open.file(xlsxPath);
+        const ssFile = dir.files.find(f => f.path === 'xl/sharedStrings.xml');
 
-      while (pos < xml.length) {
-        const siStart = xml.indexOf('<si', pos);
-        if (siStart < 0) break;
-        const siEnd = xml.indexOf('</si>', siStart);
-        if (siEnd < 0) break;
+        if (!ssFile) {
+          const hasSubstantialWorksheet = dir.files.some(
+            f => f.path.startsWith('xl/worksheets/') &&
+              (f.uncompressedSize ?? 0) > AggregationEngine.SUBSTANTIAL_WORKSHEET_BYTES,
+          );
 
-        // Extract all <t>…</t> text runs within this <si> element (handles both
-        // plain-text and rich-text formats; rich-text runs are concatenated).
-        const siContent = xml.substring(siStart, siEnd);
-        let text = '';
-        const tRe = /<t[^>]*>([^<]*)<\/t>/g;
-        let m: RegExpExecArray | null;
-        while ((m = tRe.exec(siContent)) !== null) {
-          text += m[1]
-            .replace(/&amp;/g, '&')
-            .replace(/&lt;/g, '<')
-            .replace(/&gt;/g, '>')
-            .replace(/&apos;/g, "'")
-            .replace(/&quot;/g, '"');
+          if (attempt < AggregationEngine.SHARED_STRINGS_MAX_ATTEMPTS) {
+            this.logger.warn(
+              `AggregationEngine: xl/sharedStrings.xml not found in ZIP (attempt ${attempt}/${AggregationEngine.SHARED_STRINGS_MAX_ATTEMPTS}) — retrying…`,
+            );
+            await new Promise(resolve => setTimeout(resolve, AggregationEngine.SHARED_STRINGS_RETRY_DELAY_MS));
+            continue;
+          }
+
+          if (hasSubstantialWorksheet) {
+            this.sharedStringsMissingButExpected = true;
+            this.logger.error(
+              'AggregationEngine: xl/sharedStrings.xml not found after ' +
+              `${AggregationEngine.SHARED_STRINGS_MAX_ATTEMPTS} attempts, but this workbook has ` +
+              'substantial worksheet data — shared-string text (facility names, statuses, etc.) ' +
+              'will be unreadable. This will be treated as a failed run rather than empty data.',
+            );
+          } else {
+            this.logger.warn('AggregationEngine: xl/sharedStrings.xml not found in ZIP (no substantial worksheet data — likely inline-strings file)');
+          }
+          return { strings: [], nsPrefix: '' };
         }
-        strings.push(text);
-        pos = siEnd + 5;
-      }
 
-      this.logger.info(
-        `AggregationEngine: pre-loaded ${strings.length.toLocaleString()} shared strings`,
+        const xml = (await ssFile.buffer()).toString('utf8');
+
+        // Some export tools (seen on this project: a "Combined RADET" merge
+        // step) emit every element with an explicit namespace prefix, e.g.
+        // <x:sst xmlns:x="..."><x:si><x:t>...</x:t></x:si></x:sst> instead of
+        // the more common unprefixed <sst><si><t>...</t></si></sst>. Detect
+        // whichever style this file uses from its root element so the <si>/<t>
+        // boundary searches below match either form.
+        const prefixMatch = xml.match(/<([A-Za-z0-9_]+):sst[\s>]/);
+        const nsPrefix = prefixMatch ? `${prefixMatch[1]}:` : '';
+        const siOpenTag  = `<${nsPrefix}si`;
+        const siCloseTag = `</${nsPrefix}si>`;
+        const tRe = new RegExp(`<${nsPrefix}t[^>]*>([^<]*)</${nsPrefix}t>`, 'g');
+
+        const strings: string[] = [];
+        let pos = 0;
+
+        while (pos < xml.length) {
+          const siStart = xml.indexOf(siOpenTag, pos);
+          if (siStart < 0) break;
+          const siEnd = xml.indexOf(siCloseTag, siStart);
+          if (siEnd < 0) break;
+
+          // Extract all <t>…</t> text runs within this <si> element (handles both
+          // plain-text and rich-text formats; rich-text runs are concatenated).
+          const siContent = xml.substring(siStart, siEnd);
+          let text = '';
+          tRe.lastIndex = 0;
+          let m: RegExpExecArray | null;
+          while ((m = tRe.exec(siContent)) !== null) {
+            text += m[1]
+              .replace(/&amp;/g, '&')
+              .replace(/&lt;/g, '<')
+              .replace(/&gt;/g, '>')
+              .replace(/&apos;/g, "'")
+              .replace(/&quot;/g, '"');
+          }
+          strings.push(text);
+          pos = siEnd + siCloseTag.length;
+        }
+
+        this.logger.info(
+          `AggregationEngine: pre-loaded ${strings.length.toLocaleString()} shared strings` +
+          (nsPrefix ? ` (namespace-prefixed XML: "${nsPrefix}")` : '') +
+          (attempt > 1 ? ` (succeeded on attempt ${attempt})` : ''),
+        );
+
+        // Same failure signature as "entry not found": the ZIP entry exists and
+        // has real content, but our extraction found nothing usable. Without
+        // this check a parsing regression (e.g. an unrecognised XML style)
+        // would silently degrade to the same "0 rows, upload anyway" outcome
+        // this gate exists to prevent.
+        if (strings.length === 0 && (ssFile.uncompressedSize ?? 0) > AggregationEngine.SUBSTANTIAL_WORKSHEET_BYTES) {
+          this.sharedStringsMissingButExpected = true;
+          this.logger.error(
+            `AggregationEngine: xl/sharedStrings.xml is ${(ssFile.uncompressedSize ?? 0).toLocaleString()} bytes ` +
+            'but 0 strings were extracted from it — the XML style is likely not recognised by this parser. ' +
+            'This will be treated as a failed run rather than empty data.',
+          );
+        }
+
+        return { strings, nsPrefix };
+      } catch (err) {
+        if (attempt < AggregationEngine.SHARED_STRINGS_MAX_ATTEMPTS) {
+          this.logger.warn(
+            `AggregationEngine: failed to pre-read shared strings on attempt ${attempt}/${AggregationEngine.SHARED_STRINGS_MAX_ATTEMPTS} (${String(err)}) — retrying…`,
+          );
+          await new Promise(resolve => setTimeout(resolve, AggregationEngine.SHARED_STRINGS_RETRY_DELAY_MS));
+          continue;
+        }
+        this.logger.warn(
+          `AggregationEngine: failed to pre-read shared strings after ${AggregationEngine.SHARED_STRINGS_MAX_ATTEMPTS} attempts (${String(err)}); falling back to ExcelJS default`,
+        );
+        return { strings: [], nsPrefix: '' };
+      }
+    }
+    return { strings: [], nsPrefix: '' };
+  }
+
+  // ─── Namespace-prefixed worksheet XML transform ─────────────────────────
+  // Some export tools emit every OOXML element with an explicit namespace
+  // prefix (e.g. <x:row><x:c t="s"><x:v>0</x:v></x:c></x:row>). ExcelJS's SAX
+  // parser (saxes, non-namespace-aware) treats "x:row" as the literal tag
+  // name, which never matches its hardcoded 'row'/'c'/'v' cases — so every
+  // row is silently skipped. Since a raw '<' can never appear in XML text
+  // content (it must be escaped as "&lt;"), stripping "<x:" -> "<" and
+  // "</x:" -> "</" as bytes stream through is always safe: every match is
+  // guaranteed to be an actual tag boundary, never a false positive in text.
+  // Longest suffix of `text` that is a proper prefix of `pattern` (length
+  // 1..pattern.length-1) — i.e. how many trailing characters of `text` could
+  // be the start of an as-yet-incomplete match of `pattern`. Returns 0 if
+  // there's no such overlap, meaning it's safe to emit all of `text`.
+  //
+  // A fixed holdback of "pattern.length - 1" characters is NOT sufficient:
+  // if `text` happens to end with the pattern occurring COMPLETELY (e.g.
+  // "...</x:"), a fixed holdback would still chop off the pattern's leading
+  // "<" into the emitted portion and the rest into carry, so neither this
+  // chunk's replace (missing the tail) nor the next chunk's replace
+  // (missing the now-detached leading "<") ever sees the full pattern —
+  // silently leaving it unreplaced in the output. Checking for an actual
+  // partial-match overlap (rather than blindly holding back a fixed count)
+  // avoids this: a complete match at the tail has zero overlap and is
+  // replaced immediately; only a genuinely incomplete tail gets held back.
+  private static longestPrefixOverlap(text: string, pattern: string): number {
+    const maxLen = Math.min(pattern.length - 1, text.length);
+    for (let len = maxLen; len >= 1; len--) {
+      if (text.slice(text.length - len) === pattern.slice(0, len)) return len;
+    }
+    return 0;
+  }
+
+  private async *stripNamespacePrefix(
+    iterator: AsyncIterable<Buffer | string>,
+    nsPrefix: string,
+  ): AsyncGenerator<string> {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { StringDecoder } = require('string_decoder') as { StringDecoder: new (enc: string) => { write(b: Buffer): string; end(): string } };
+    const decoder = new StringDecoder('utf8');
+    const openTag = `<${nsPrefix}`;
+    const closeTag = `</${nsPrefix}`;
+    let carry = '';
+
+    for await (const chunk of iterator) {
+      const buf = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+      const text = carry + decoder.write(buf);
+      const holdback = Math.max(
+        AggregationEngine.longestPrefixOverlap(text, openTag),
+        AggregationEngine.longestPrefixOverlap(text, closeTag),
       );
-      return strings;
-    } catch (err) {
-      this.logger.warn(
-        `AggregationEngine: failed to pre-read shared strings (${String(err)}); falling back to ExcelJS default`,
-      );
-      return [];
+      const safeEnd = text.length - holdback;
+      if (safeEnd <= 0) {
+        carry = text;
+        continue;
+      }
+      const toEmit = text.slice(0, safeEnd);
+      carry = text.slice(safeEnd);
+      yield toEmit.split(openTag).join('<').split(closeTag).join('</');
+    }
+    const rest = carry + decoder.end();
+    if (rest) {
+      yield rest.split(openTag).join('<').split(closeTag).join('</');
     }
   }
 

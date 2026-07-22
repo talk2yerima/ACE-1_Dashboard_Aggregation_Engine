@@ -98,30 +98,31 @@ CombinedRADET:
 CombinedHTS:
   - DATIMCode        # 1
   - PatientId        # 2
-  - Sex              # 3
-  - Age              # 4
-  - MaritalStatus    # 5
-  - LGAOfResidence   # 6
-  - StateOfResidence # 7
-  - DateVisit        # 8
-  - FirstTimeVisit   # 9
-  - EntryPoint       # 10
-  - IndexClient      # 11
-  - PreviouslyTested # 12
-  - TargetGroup      # 13
-  - ReferredFrom     # 14
-  - TestingSetting   # 15
-  - Modality         # 16
-  - CounselingType   # 17
-  - PregnancyStatus  # 18
-  - IndexType        # 19
-  - PreviousTestDate # 20
-  - PreviousTestResult # 21
-  - HTSCount         # 22
-  - FinalHIVTestResult # 23
-  - DateOfHIVTesting   # 24
-  - PREPOffered        # 25
-  - PREPAccepted       # 26
+  - ClientCode       # 3
+  - Sex              # 4
+  - Age              # 5
+  - MaritalStatus    # 6
+  - LGAOfResidence   # 7
+  - StateOfResidence # 8
+  - DateVisit        # 9
+  - FirstTimeVisit   # 10
+  - EntryPoint       # 11
+  - IndexClient      # 12
+  - PreviouslyTested # 13
+  - TargetGroup      # 14
+  - ReferredFrom     # 15
+  - TestingSetting   # 16
+  - Modality         # 17
+  - CounselingType   # 18
+  - PregnancyStatus  # 19
+  - IndexType        # 20
+  - PreviousTestDate # 21
+  - PreviousTestResult # 22
+  - HTSCount         # 23
+  - FinalHIVTestResult # 24
+  - DateOfHIVTesting   # 25
+  - PREPOffered        # 26
+  - PREPAccepted       # 27
 
 CombineMaternal:
   - DATIMCode                                            # 1  (datimCode)
