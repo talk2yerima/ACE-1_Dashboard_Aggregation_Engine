@@ -889,28 +889,40 @@ export class AggregationEngine {
     this.logger.info(`  Indicators processed:   ${this.stats.indicatorsProcessed.join(', ')}`);
 
     // ── Sanity gate ──────────────────────────────────────────────────────────
-    // Two independent signals that a run silently failed rather than
-    // genuinely finding no data — either one is grounds to abort here,
-    // before the caller writes/uploads anything, rather than silently
-    // publishing an empty or partial dataset that could overwrite good data.
-    if (this.sharedStringsMissingButExpected) {
-      throw new Error(
-        'AggregationEngine: aborting — xl/sharedStrings.xml could not be read (or produced no ' +
-        'usable strings) from a workbook with substantial worksheet data, so no row content was ' +
-        `readable (Total rows read: ${this.stats.totalRows}). Refusing to produce output from this run. ` +
-        'Re-run the pipeline; if this recurs, investigate the workbook file directly.',
-      );
-    }
+    // The authoritative signal that a run silently failed is 0 rows read from
+    // a substantial workbook — that's grounds to abort here, before the
+    // caller writes/uploads anything, rather than silently publishing an
+    // empty or partial dataset that could overwrite good data.
+    //
+    // A missing/unparseable xl/sharedStrings.xml is NOT on its own proof of
+    // failure: some export variants of this workbook (observed: whenever a
+    // "CombineAHD" sheet is present) write every cell's text inline
+    // (t="inlineStr") instead of via a shared-string table, which is a valid
+    // OOXML format with no sharedStrings.xml entry at all — and ExcelJS reads
+    // inline strings natively, independent of this class's shared-strings
+    // pre-read. So it's only treated as fatal when it's corroborated by the
+    // real symptom (0 rows actually read); otherwise it's logged and ignored.
     const workbookSizeBytes = fs.existsSync(this.options.workbookPath)
       ? fs.statSync(this.options.workbookPath).size
       : 0;
     if (this.stats.totalRows === 0 && workbookSizeBytes > AggregationEngine.SUBSTANTIAL_WORKSHEET_BYTES) {
+      const sharedStringsNote = this.sharedStringsMissingButExpected
+        ? ' xl/sharedStrings.xml could also not be read/parsed, which may be the cause.'
+        : '';
       throw new Error(
         `AggregationEngine: aborting — 0 rows were read from a workbook of ` +
         `${workbookSizeBytes.toLocaleString()} bytes on disk. A file this size should contain data; ` +
         '0 rows most likely means something in the workbook could not be parsed (e.g. an XML style ' +
-        'this pipeline does not recognise), not that today genuinely has no data. Refusing to ' +
-        'produce output from this run — investigate the workbook file directly.',
+        'this pipeline does not recognise), not that today genuinely has no data.' + sharedStringsNote +
+        ' Refusing to produce output from this run — investigate the workbook file directly.',
+      );
+    }
+    if (this.sharedStringsMissingButExpected) {
+      this.logger.warn(
+        'AggregationEngine: xl/sharedStrings.xml could not be read/parsed, but ' +
+        `${this.stats.totalRows.toLocaleString()} rows were read successfully — this workbook variant ` +
+        'most likely uses inline strings instead of a shared-string table (a valid alternative OOXML ' +
+        'format), not a parsing failure. Continuing.',
       );
     }
 
