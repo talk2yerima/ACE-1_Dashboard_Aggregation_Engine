@@ -83,7 +83,8 @@ export class OutputWriter {
 
   openCsvStream(csvPath: string): fs.WriteStream {
     const stream = fs.createWriteStream(csvPath, { encoding: 'utf8' });
-    stream.write(DASHBOARD_COLUMNS.map(c => c.header).join(',') + '\n');
+    // BOM so Excel decodes UTF-8 (otherwise • and – render as mojibake)
+    stream.write('\uFEFF' + DASHBOARD_COLUMNS.map(c => c.header).join(',') + '\n');
     return stream;
   }
 
@@ -119,7 +120,7 @@ export class OutputWriter {
 
   openTargetCsvStream(csvPath: string): fs.WriteStream {
     const stream = fs.createWriteStream(csvPath, { encoding: 'utf8' });
-    stream.write(TARGET_COLUMNS.join(',') + '\n');
+    stream.write('\uFEFF' + TARGET_COLUMNS.join(',') + '\n');
     return stream;
   }
 
@@ -284,7 +285,7 @@ export class OutputWriter {
       lines.push(line);
     }
 
-    fs.writeFileSync(filePath, lines.join('\n'), 'utf8');
+    fs.writeFileSync(filePath, '\uFEFF' + lines.join('\n'), 'utf8');
   }
 
   /** Standard quoted CSV cell — handles commas, quotes, and newlines. */

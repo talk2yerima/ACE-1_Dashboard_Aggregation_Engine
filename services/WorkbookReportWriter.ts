@@ -87,7 +87,7 @@ export class WorkbookReportWriter {
 
     for await (const line of rl) {
       if (!line.trim()) continue;
-      const parsed = this.parseCsvLine(line);
+      const parsed = this.parseCsvLine(rowCount === 0 ? line.replace(/^\uFEFF/, '') : line);
       if (rowCount === 0) {
         headers = parsed;
         ws.columns = headers.map((h) => ({ header: h, key: h, width: this.widthForHeader(h) }));
@@ -429,7 +429,7 @@ export class WorkbookReportWriter {
       ]));
     }
 
-    fs.writeFileSync(filePath, lines.join('\r\n'), 'utf8');
+    fs.writeFileSync(filePath, '\uFEFF' + lines.join('\r\n'), 'utf8');
   }
 
   private writeMonthlyCsv(
@@ -466,7 +466,7 @@ export class WorkbookReportWriter {
       ]));
     }
 
-    fs.writeFileSync(filePath, lines.join('\r\n'), 'utf8');
+    fs.writeFileSync(filePath, '\uFEFF' + lines.join('\r\n'), 'utf8');
   }
 
   private toCsvRow(values: unknown[]): string {
@@ -544,7 +544,7 @@ export class WorkbookReportWriter {
   }
 
   private stripStatePrefix(value: string): string {
-    return String(value ?? '').replace(/^(ad|bo|yo|ta)\s+/i, '').trim();
+    return String(value ?? '').replace(/^(ad|bo|yo|ta|ba)\s+/i, '').trim();
   }
 
   private normalizeFacility(value: string): string {

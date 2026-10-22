@@ -259,7 +259,7 @@ export class AggregationEngine {
    * For other sheets (HTS): scans all columns.
    *
    * Each candidate is validated against orgUnits.yaml so false positives are
-   * effectively impossible (only 74 known codes).
+   * effectively impossible (only codes listed in orgUnits.yaml are accepted).
    */
   private findFacilityDatim(record: Record<string, unknown>, sheetName: string): string | null {
     const tryVal = (str: string): string | null => {

@@ -417,7 +417,11 @@ async function main(): Promise<void> {
   }
 
   // ── Upload CSV + XLSX together ─────────────────────────────────────────────
-  if (rowCount > 0 && connectionString) {
+  // SKIP_UPLOAD=1 keeps outputs local (connection string is still used to download the RADET)
+  const skipUpload = ['1', 'true', 'yes'].includes(String(process.env['SKIP_UPLOAD'] ?? '').trim().toLowerCase());
+  if (rowCount > 0 && skipUpload) {
+    logger.warn('  SKIP_UPLOAD is set — skipping blob upload; outputs kept in outputs/.');
+  } else if (rowCount > 0 && connectionString) {
     const filesToUpload: Array<{ filePath: string; contentType: string }> = [];
     if (fs.existsSync(csvPath)) {
       filesToUpload.push({ filePath: csvPath, contentType: 'text/csv' });

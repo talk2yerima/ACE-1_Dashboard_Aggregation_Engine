@@ -10,7 +10,7 @@
 orgUnits:
 
   # ── DATIMCode → { facility, state } ────────────────────────────────────────
-  # Prefixes: ad=Adamawa  bo=Borno  yo=Yobe  ta=Taraba
+  # Prefixes: ad=Adamawa  bo=Borno  yo=Yobe  ta=Taraba  ba=Bauchi
 
   datimCodes:
 
@@ -243,6 +243,101 @@ orgUnits:
     M0b885TVP1Q:
       facility: "Zing General Hospital"
       state: "Taraba"
+
+    # ── Bauchi ──────────────────────────────────────────────────────────────────
+    BHkRzQsQgSl:
+      facility: "Abubakar Tafawa Balewa University Teaching Hospital"
+      state: "Bauchi"
+    lHZWSoEKUku:
+      facility: "Alkaleri General Hospital"
+      state: "Bauchi"
+    MpmpfU1fB1W:
+      facility: "Apple Clinic"
+      state: "Bauchi"
+    bCq8A5XWjyg:
+      facility: "Azare Federal Medical Centre"
+      state: "Bauchi"
+    e2ghLPzhRsA:
+      facility: "Azare General Hospital"
+      state: "Bauchi"
+    ExiHYOsNk3q:
+      facility: "Bayara Infectious Diseases Hospital"
+      state: "Bauchi"
+    Xz63xHPUIiS:
+      facility: "Bogoro General Hospital"
+      state: "Bauchi"
+    zNAZB14AXcS:
+      facility: "Damban General Hospital"
+      state: "Bauchi"
+    E8JDdgJrLEO:
+      facility: "Darazo General Hospital"
+      state: "Bauchi"
+    TmGBqInZVhq:
+      facility: "Dass General Hospital"
+      state: "Bauchi"
+    zefkaAepgSB:
+      facility: "Gamawa General Hospital"
+      state: "Bauchi"
+    wXZtro6nbKm:
+      facility: "Giade General Hospital"
+      state: "Bauchi"
+    qtC7BSzSU42:
+      facility: "Giade Maternal & Child Health Clinic"
+      state: "Bauchi"
+    nkN1spDorve:
+      facility: "Itas General Hospital"
+      state: "Bauchi"
+    ZbULgMXKgbM:
+      facility: "Jama'are General Hospital"
+      state: "Bauchi"
+    OcFekRBRw8K:
+      facility: "Kafin Madaki General Hospital"
+      state: "Bauchi"
+    bwdwu8JzR88:
+      facility: "Katagum Zaki General Hospital"
+      state: "Bauchi"
+    VL8xxIs8ink:
+      facility: "Lere PHC"
+      state: "Bauchi"
+    e1wNZo2KVzh:
+      facility: "Mararraba Primary Health Centre"
+      state: "Bauchi"
+    ooKDMYJdMx4:
+      facility: "Misau General Hospital"
+      state: "Bauchi"
+    Kw2RkNdIiXq:
+      facility: "Ni ima Consultant"
+      state: "Bauchi"
+    yz97bhSxBx3:
+      facility: "Ningi General Hospital"
+      state: "Bauchi"
+    psgTbmKsVCn:
+      facility: "Pohlycon Clinic"
+      state: "Bauchi"
+    f6kjRzEuJzu:
+      facility: "Reemee Clinic"
+      state: "Bauchi"
+    IwToYx767df:
+      facility: "Shira Yana General Hospital"
+      state: "Bauchi"
+    bQStBgfeo52:
+      facility: "State Low Cost Primary Health Centre"
+      state: "Bauchi"
+    l4M4UZXZ63H:
+      facility: "Tafawa-Balewa General Hospital"
+      state: "Bauchi"
+    m2jjxq7eDXo:
+      facility: "Toro General Hospital"
+      state: "Bauchi"
+    bT2ZyZLk44k:
+      facility: "Urban Maternity"
+      state: "Bauchi"
+    dDjYg2AJ2Uh:
+      facility: "Warji General Hospital"
+      state: "Bauchi"
+    LH4mky1erCW:
+      facility: "Wuntin Dada Maternal and Child Health Clinic"
+      state: "Bauchi"
 
   # ── UID fallbacks (populated from config/orgUnits-raw.csv after first run) ─
   states: {}

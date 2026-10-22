@@ -13,6 +13,7 @@ WITH deduped AS (
         "ReportingDate"
     )
         "DataElementId",
+        "EntryPoint",
         "Section",
         "State",
         "Facility",
@@ -23,7 +24,7 @@ WITH deduped AS (
         "ReportingDate",
         "Value"
     FROM public."Addons"
-    WHERE "DataElementId" IN (
+    WHERE ("DataElementId" IN (
         'y1C9SlSiZhQ',  -- DR POST-RESP - PHYSICAL and/or EMOTIONAL Violence_v22
         'uXsX7BTOuPa',  -- DR POST-RESP - Sexual Violence_v22
         'U3buuLpx4pV',  -- TB (separate)
@@ -35,6 +36,8 @@ WITH deduped AS (
         'x6yYzcbQrSu',  -- HIV Test Eligible (Community)
         'mC5eo9Ouku0'   -- ANC1 Attendees (PMTCT)
     )
+    -- All data elements under these entry points (Section is unique per element)
+    OR "EntryPoint" IN ('EWS', 'NHMIS', 'NHMIS Addendum'))
     AND "ReportingDate" >= $1
     AND "ReportingDate" <= $2
     ORDER BY
@@ -46,7 +49,8 @@ WITH deduped AS (
         "AgeGroup",
         "CategoryComboId",
         "ReportingDate",
-        "UpdatedAt" DESC
+        "UpdatedAt" DESC,
+        "Id" DESC
 ),
 violence_combined AS (
     SELECT
@@ -227,6 +231,29 @@ anc1_attendees AS (
         "Sex",
         "AgeGroup",
         "ReportingDate"
+),
+ews_nhmis AS (
+    SELECT
+        "Section",
+        "State",
+        "Facility",
+        "Datim",
+        "Sex",
+        "AgeGroup",
+        SUM("Value") AS "Value",
+        "DataElementId",
+        "ReportingDate"
+    FROM deduped
+    WHERE "EntryPoint" IN ('EWS', 'NHMIS', 'NHMIS Addendum')
+    GROUP BY
+        "Section",
+        "DataElementId",
+        "State",
+        "Facility",
+        "Datim",
+        "Sex",
+        "AgeGroup",
+        "ReportingDate"
 )
 SELECT * FROM violence_combined
 UNION ALL
@@ -243,6 +270,8 @@ UNION ALL
 SELECT * FROM hiv_test_eligible_community
 UNION ALL
 SELECT * FROM anc1_attendees
+UNION ALL
+SELECT * FROM ews_nhmis
 ORDER BY
     "ReportingDate" DESC,
     "State",

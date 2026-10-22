@@ -216,7 +216,7 @@ export class TargetService {
   private normalizeFacility(value: string): string {
     return String(value ?? '')
       .toLowerCase()
-      .replace(/^(ad|bo|yo|ta)\s+/, '')
+      .replace(/^(ad|bo|yo|ta|ba)\s+/, '')
       .replace(/geidam/g, 'geidem')
       .replace(/rapha/g, 'rapah')
       .replace(/[^a-z0-9]+/g, ' ')
